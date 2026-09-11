@@ -22,15 +22,15 @@ import { SheetView } from "./SheetView";
 
 type Mode = "bonus" | "pick" | "passivePick" | "extra" | "over";
 
-export function Game({
-  game,
-  setGame,
-  onQuit,
-}: {
+interface Props {
   game: GameState;
   setGame: (g: GameState) => void;
+  canUndo: boolean;
+  onUndo: () => void;
   onQuit: () => void;
-}) {
+}
+
+export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
   const player = currentPlayer(game);
   const [selected, setSelected] = useState<DieColor | null>(null);
   const [viewing, setViewing] = useState<number | null>(null);
@@ -115,9 +115,14 @@ export function Game({
       <div className="game">
         <header className="topbar">
           <h1>Game over</h1>
-          <button type="button" className="btn" onClick={onQuit}>
-            New game
-          </button>
+          <div className="topbar-actions">
+            <button type="button" className="btn" disabled={!canUndo} onClick={onUndo}>
+              Undo
+            </button>
+            <button type="button" className="btn" onClick={onQuit}>
+              New game
+            </button>
+          </div>
         </header>
         <Scoreboard game={game} final />
         <div className="sheets-final">
@@ -212,6 +217,9 @@ export function Game({
           {multi && <span className="muted"> · active: {activeName}</span>}
         </div>
         <div className="topbar-actions">
+          <button type="button" className="btn small" disabled={!canUndo} onClick={onUndo} title="Roll back the last action">
+            Undo
+          </button>
           <button
             type="button"
             className="btn small"
