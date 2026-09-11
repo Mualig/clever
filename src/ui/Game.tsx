@@ -133,7 +133,7 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
           </div>
         </header>
         <Scoreboard game={game} final />
-        <div className="main">
+        <div className="main final">
           <div className="col-left">
             <div className="log">
               {game.log

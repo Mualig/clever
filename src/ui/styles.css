@@ -247,9 +247,15 @@ th.sc-yellow { color: var(--ink); }
 /* ---------- wide screens: turn panel + log on the left, sheet on the right ---------- */
 @media (min-width: 1100px) {
   .game { max-width: 1180px; }
-  .main { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 16px; align-items: start; }
-  .col-left { position: sticky; top: 8px; }
-  .col-left .turn-panel { margin-top: 0; }
-  .col-right .tabs { margin-top: 0; }
+  .main { display: grid; grid-template-columns: 380px minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; gap: 0 16px; align-items: start; }
+  /* In-game: columns dissolve into the grid so the tabs get their own row and
+     the turn panel lines up with the top of the sheet card. */
+  .main:not(.final) > .col-left, .main:not(.final) > .col-right { display: contents; }
+  .main:not(.final) .tabs { grid-column: 2; grid-row: 1; margin: 0 0 8px; }
+  .main:not(.final) .turn-panel { grid-column: 1; grid-row: 2; margin: 0; }
+  .main:not(.final) .scoreboard-wrap { grid-column: 1; grid-row: 3; }
+  .main:not(.final) .log { grid-column: 1; grid-row: 4; }
+  .main:not(.final) .sheet { grid-column: 2; grid-row: 2 / span 4; margin-top: 0; }
+  .main.final .col-left > .log { margin-top: 0; }
   .log { max-height: 320px; }
 }
