@@ -15,15 +15,18 @@ export function Die({
   value,
   selectable,
   selected,
+  discard,
   onClick,
 }: {
   color: DieColor;
   value: number;
   selectable?: boolean;
   selected?: boolean;
+  /** Will go to the silver platter if the current selection is confirmed. */
+  discard?: boolean;
   onClick?: () => void;
 }) {
-  const cls = ['die', `die-${color}`, selectable ? 'selectable' : '', selected ? 'selected' : ''].join(' ');
+  const cls = ['die', `die-${color}`, selectable ? 'selectable' : '', selected ? 'selected' : '', discard ? 'discard' : ''].join(' ');
   return (
     <button type="button" className={cls} disabled={!selectable} onClick={onClick} aria-label={`${color} die showing ${value}`}>
       {Array.from({ length: 9 }, (_, i) => (
@@ -37,11 +40,13 @@ export function DiceTray({
   game,
   selectable,
   selected,
+  discarding = [],
   onSelect,
 }: {
   game: GameState;
   selectable: DieColor[];
   selected: DieColor | null;
+  discarding?: DieColor[];
   onSelect: (c: DieColor) => void;
 }) {
   const { dice } = game;
@@ -49,7 +54,15 @@ export function DiceTray({
   const platter = DIE_COLORS.filter((c) => dice.location[c] === 'platter');
   const chosen = dice.chosenOrder;
   const render = (c: DieColor) => (
-    <Die key={c} color={c} value={dice.values[c]} selectable={selectable.includes(c)} selected={selected === c} onClick={() => onSelect(c)} />
+    <Die
+      key={c}
+      color={c}
+      value={dice.values[c]}
+      selectable={selectable.includes(c)}
+      selected={selected === c}
+      discard={discarding.includes(c)}
+      onClick={() => onSelect(c)}
+    />
   );
   const soloPassive = game.solo && game.phase.kind === 'passive';
   return (

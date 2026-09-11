@@ -89,6 +89,14 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
         ? targetsForDie(sheet, game.dice, selected)
         : [];
 
+  // Dice that will land on the silver platter if the selected die is taken now.
+  const discarding: DieColor[] =
+    mode === "pick" && selected && phase.kind === "active"
+      ? diceAt(game, "pool").filter(
+          (c) => c !== selected && (phase.step === 2 || game.dice.values[c] < game.dice.values[selected]),
+        )
+      : [];
+
   const dispatch = (a: Action) => {
     try {
       setGame(reduce(game, a));
@@ -253,6 +261,7 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
               game={game}
               selectable={selectable}
               selected={selected}
+              discarding={discarding}
               onSelect={(c) => setSelected(selected === c ? null : c)}
             />
             <div className="controls">
