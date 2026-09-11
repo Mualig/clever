@@ -12,6 +12,12 @@ npm test         # engine tests (vitest)
 npm run build    # type-check + production build in dist/
 ```
 
+## Deploy
+
+Pushing to `main` runs `.github/workflows/deploy.yml`, which tests, builds and publishes `dist/` to GitHub Pages.
+One-time setup in the repository: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+The workflow sets `BASE_PATH` to `/<repo>/` (or `/` for a `*.github.io` repo) so asset URLs resolve on Pages.
+
 ## Layout
 
 - `src/game/sheet.ts` – static score-sheet data: grids, bonus positions, score tables, round-track bonuses.
