@@ -133,18 +133,30 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
           </div>
         </header>
         <Scoreboard game={game} final />
-        <div className="sheets-final">
-          {game.players.map((p, i) => (
-            <div key={i}>
-              <h3>{p.name}</h3>
-              <SheetView
-                sheet={p.sheet}
-                round={game.round}
-                totalRounds={game.totalRounds}
-                compact
-              />
+        <div className="main">
+          <div className="col-left">
+            <div className="log">
+              {game.log
+                .slice(-40)
+                .reverse()
+                .map((e, i) => (
+                  <div key={i}>
+                    <span className="muted">
+                      R{e.round} {game.players[e.player].name}:
+                    </span>{" "}
+                    {e.text}
+                  </div>
+                ))}
             </div>
-          ))}
+          </div>
+          <div className="col-right sheets-final">
+            {game.players.map((p, i) => (
+              <div key={i}>
+                <h3>{p.name}</h3>
+                <SheetView sheet={p.sheet} round={game.round} totalRounds={game.totalRounds} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

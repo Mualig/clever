@@ -114,13 +114,19 @@ h1, h2, h3 { margin: 0.2em 0; }
 .tab { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 4px 12px; }
 .tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .tab.turn::before { content: '● '; color: var(--target); }
-.scoreboard { width: 100%; border-collapse: collapse; margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.scoreboard-wrap { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.scoreboard { width: 100%; border-collapse: collapse; }
 .scoreboard th, .scoreboard td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--line); }
+.scoreboard tr:last-child td { border-bottom: 0; }
 .scoreboard td:first-child, .scoreboard th:first-child { text-align: left; }
 .scoreboard tr.winner { background: #fff7d6; }
 .rating { font-size: 0.8rem; color: var(--muted); font-weight: normal; }
 .log { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; max-height: 240px; overflow: auto; }
-.sheets-final { display: grid; gap: 16px; margin-top: 16px; }
+.sheets-final { display: grid; gap: 16px; }
+.sheets-final h3 { margin: 0 0 4px; }
+.col-left .scoreboard-wrap { margin-top: 0; }
+.scoreboard-wrap + .main { margin-top: 12px; }
+.col-left > .log:first-child { margin-top: 0; }
 
 /* ---------- handoff overlay ---------- */
 .handoff { position: fixed; inset: 0; background: rgba(31,36,48,0.92); display: grid; place-items: center; z-index: 10; padding: 16px; }
@@ -192,9 +198,9 @@ h1, h2, h3 { margin: 0.2em 0; }
 
 .blue-scale { display: flex; gap: 1px; justify-content: center; margin-bottom: 6px; }
 .scale-item { display: flex; flex-direction: column; align-items: center; font-size: 0.6rem; width: 22px; border-radius: 4px; padding: 1px 0; line-height: 1.15; }
-.scale-item.current { background: var(--blue); color: #fff; }
 .scale-n { color: inherit; opacity: 0.75; }
-.scale-p { font-weight: 800; font-size: 0.75rem; }
+.scale-p { font-weight: 800; font-size: 0.75rem; line-height: 18px; min-width: 18px; padding: 0 3px; border-radius: 999px; }
+.scale-item.current .scale-p { background: var(--blue); color: #fff; box-shadow: 0 0 0 2px #fff; }
 
 .track { display: grid; grid-template-columns: 24px repeat(11, minmax(0, 1fr)); align-items: start; }
 .track-arrow { margin-top: 18px; height: var(--tcell); display: flex; align-items: center; font-size: 1.2rem; color: rgba(0,0,0,0.5); }
