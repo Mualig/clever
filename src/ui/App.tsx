@@ -4,8 +4,8 @@ import type { GameState } from '../game/types';
 import { Game } from './Game';
 import { Setup } from './Setup';
 
-const STORAGE_KEY = 'clever-game-v1';
-const HISTORY_KEY = 'clever-history-v1';
+const STORAGE_KEY = 'clever-game-v2';
+const HISTORY_KEY = 'clever-history-v2';
 const MAX_HISTORY = 60;
 
 function load<T>(key: string): T | null {
@@ -53,9 +53,9 @@ export function App() {
           setHistory(savedHistory);
           setGame(saved);
         }}
-        onStart={(names) => {
+        onStart={(mode, names) => {
           setHistory([]);
-          setGame(newGame(names));
+          setGame(newGame(names, mode));
         }}
       />
     );

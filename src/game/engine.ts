@@ -1,24 +1,21 @@
+import { clever1 } from './clever1';
+import { clever3 } from './clever3';
 import { nextRandom, randomSeed } from './rng';
-import {
-  applyAutoBonus,
-  applyBonusAt,
-  applyTarget,
-  bonusTargets,
-  dieValueFor,
-  isChoiceBonus,
-  newSheet,
-  plusOnesLeft,
-  rerollsLeft,
-  sameTarget,
-  targetsForDie,
-} from './rules';
-import { DIE_COLORS, ROUNDS_BY_PLAYER_COUNT, ROUND_BONUS, describeBonus, type Bonus, type DieColor } from './sheet';
-import type { Action, DiceState, GameState, Sheet, Target } from './types';
+import { DIE_COLORS, ROUNDS_BY_PLAYER_COUNT, type DieColor } from './sheet';
+import type { Action, DiceState, GameState, Pretend } from './types';
+import type { DieValues, GameMode, PlacementContext, Variant } from './variant';
 
 export class RuleError extends Error {}
 
 function fail(msg: string): never {
   throw new RuleError(msg);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyVariant = Variant<any, any, any>;
+
+export function variantFor(mode: GameMode): AnyVariant {
+  return mode === 'clever3' ? clever3 : clever1;
 }
 
 // ---------------------------------------------------------------------------
@@ -39,7 +36,7 @@ export function currentPlayer(s: GameState): number {
   }
 }
 
-export function sheetOf(s: GameState, player: number): Sheet {
+export function sheetOf(s: GameState, player: number): unknown {
   return s.players[player].sheet;
 }
 
@@ -47,13 +44,46 @@ export function diceAt(s: GameState, location: DiceState['location'][DieColor]):
   return DIE_COLORS.filter((c) => s.dice.location[c] === location);
 }
 
+/** Real / pretended values of a chosen die, plus the blue + white sum. */
+export function valuesFor(s: GameState, color: DieColor, as?: Pretend): DieValues {
+  const real = s.dice.values;
+  const value = as?.value ?? real[color];
+  const blue = color === 'blue' ? value + real.white : color === 'white' ? real.blue + value : real.blue + real.white;
+  return { value, blue, real };
+}
+
+/** Where the die counts as coming from (die fields or silver platter). */
+export function contextFor(s: GameState, color: DieColor): PlacementContext {
+  const loc = s.dice.location[color];
+  const others = (l: DiceState['location'][DieColor]) => DIE_COLORS.filter((c) => c !== color && s.dice.location[c] === l).map((c) => s.dice.values[c]);
+  if (loc === 'platter') return { role: 'passive', field: null, companions: others('platter') };
+  if (loc === 'chosen') return { role: 'active', field: s.dice.field[color], companions: others('chosen') };
+  return { role: 'active', field: s.phase.kind === 'active' ? s.phase.step : null, companions: others('chosen') };
+}
+
+/** All boxes on `player`'s sheet where die `color` can be written now. */
+export function targetsFor(s: GameState, player: number, color: DieColor, as?: Pretend): unknown[] {
+  return variantFor(s.mode).targets(sheetOf(s, player), color, valuesFor(s, color, as), contextFor(s, color));
+}
+
+/** Targets of the pending bonus choice at the head of the queue. */
+export function pendingTargets(s: GameState): unknown[] {
+  const head = s.pending[0];
+  if (!head) return [];
+  return variantFor(s.mode).bonusTargets(sheetOf(s, head.player), head.bonus, s.dice.values);
+}
+
+function usable(s: GameState, player: number, colors: DieColor[]): DieColor[] {
+  const v = variantFor(s.mode);
+  const canPretend = v.anyNumberChoices(sheetOf(s, player)).length > 0;
+  return colors.filter((c) => canPretend || targetsFor(s, player, c).length > 0);
+}
+
 /** Dice a passive player may take: usable platter dice, else usable dice of the active player. */
 export function passiveCandidates(s: GameState, player: number): DieColor[] {
-  const sheet = sheetOf(s, player);
-  const usable = (colors: DieColor[]) => colors.filter((c) => targetsForDie(sheet, s.dice, c).length > 0);
-  const platter = usable(diceAt(s, 'platter'));
+  const platter = usable(s, player, diceAt(s, 'platter'));
   if (platter.length > 0 || s.solo) return platter;
-  return usable(diceAt(s, 'chosen'));
+  return usable(s, player, diceAt(s, 'chosen'));
 }
 
 /** Whether `player` may currently spend a +1 action. */
@@ -61,18 +91,25 @@ export function canUsePlusOne(s: GameState, player: number): boolean {
   if (s.pending.length > 0) return false;
   const p = s.phase;
   const inWindow = (p.kind === 'activeExtra' && player === s.activePlayer) || (p.kind === 'passive' && p.player === player && p.picked);
-  return inWindow && plusOnesLeft(sheetOf(s, player)) > 0;
+  return inWindow && variantFor(s.mode).plusOnesLeft(sheetOf(s, player)) > 0;
 }
 
 /** Dice `player` may take with a +1 action right now. */
 export function plusOneCandidates(s: GameState, player: number): DieColor[] {
   if (!canUsePlusOne(s, player)) return [];
-  const sheet = sheetOf(s, player);
-  return DIE_COLORS.filter((c) => !s.extraUsed[player].includes(c) && targetsForDie(sheet, s.dice, c).length > 0);
+  return usable(
+    s,
+    player,
+    DIE_COLORS.filter((c) => !s.extraUsed[player].includes(c)),
+  );
 }
 
 export function canReroll(s: GameState): boolean {
-  return s.pending.length === 0 && s.phase.kind === 'active' && rerollsLeft(sheetOf(s, s.activePlayer)) > 0 && diceAt(s, 'pool').length > 0;
+  return s.pending.length === 0 && s.phase.kind === 'active' && variantFor(s.mode).rerollsLeft(sheetOf(s, s.activePlayer)) > 0 && diceAt(s, 'pool').length > 0;
+}
+
+export function canPass(s: GameState): boolean {
+  return s.pending.length === 0 && s.phase.kind === 'active' && variantFor(s.mode).unusableRoll === 'forfeit';
 }
 
 // ---------------------------------------------------------------------------
@@ -101,25 +138,27 @@ function random(s: GameState): number {
  * Hands `bonuses` to `player`. Automatic bonuses are applied at once (chaining as needed);
  * bonuses that need a decision are queued as pending choices.
  */
-function grant(s: GameState, player: number, bonuses: Bonus[], atFront = false) {
+function grant(s: GameState, player: number, bonuses: unknown[], atFront = false) {
+  const v = variantFor(s.mode);
   const queue = [...bonuses];
   const pending: GameState['pending'] = [];
   while (queue.length > 0) {
     const b = queue.shift()!;
     const sheet = sheetOf(s, player);
-    if (isChoiceBonus(b)) {
-      const targets = bonusTargets(sheet, b);
+    if (v.isChoice(b)) {
+      const optional = v.isOptional(b);
+      const targets = v.bonusTargets(sheet, b, s.dice.values);
       if (targets.length === 0) {
-        log(s, player, `Bonus ${describeBonus(b)} lost (no free box)`);
-      } else if (targets.length === 1) {
-        log(s, player, `Bonus ${describeBonus(b)} applied`);
-        queue.unshift(...applyBonusAt(sheet, b, targets[0]));
+        if (!optional) log(s, player, `Bonus ${v.describeBonus(b)} lost (no free box)`);
+      } else if (targets.length === 1 && !optional) {
+        log(s, player, `Bonus ${v.describeBonus(b)} applied`);
+        queue.unshift(...v.applyBonusAt(sheet, b, targets[0]));
       } else {
-        pending.push({ player, bonus: b });
+        pending.push({ player, bonus: b, optional });
       }
     } else {
-      log(s, player, `Bonus ${describeBonus(b)}`);
-      queue.unshift(...applyAutoBonus(sheet, b));
+      log(s, player, `Bonus ${v.describeBonus(b)}`);
+      queue.unshift(...v.applyAuto(sheet, b));
     }
   }
   if (atFront) s.pending.unshift(...pending);
@@ -129,23 +168,27 @@ function grant(s: GameState, player: number, bonuses: Bonus[], atFront = false) 
 
 /** Drops pending choices that became impossible and auto-applies those with a single option. */
 function normalizePending(s: GameState) {
+  const v = variantFor(s.mode);
   while (s.pending.length > 0) {
     const head = s.pending[0];
     const sheet = sheetOf(s, head.player);
-    const targets = bonusTargets(sheet, head.bonus);
-    if (targets.length > 1) return;
+    const targets = v.bonusTargets(sheet, head.bonus, s.dice.values);
+    if (targets.length > 1 || (targets.length === 1 && head.optional)) return;
     s.pending.shift();
     if (targets.length === 0) {
-      log(s, head.player, `Bonus ${describeBonus(head.bonus)} lost (no free box)`);
+      if (!head.optional) log(s, head.player, `Bonus ${v.describeBonus(head.bonus)} lost (no free box)`);
     } else {
-      log(s, head.player, `Bonus ${describeBonus(head.bonus)} applied`);
-      grant(s, head.player, applyBonusAt(sheet, head.bonus, targets[0]), true);
+      log(s, head.player, `Bonus ${v.describeBonus(head.bonus)} applied`);
+      grant(s, head.player, v.applyBonusAt(sheet, head.bonus, targets[0]), true);
     }
   }
 }
 
 function startActiveTurn(s: GameState) {
-  for (const c of DIE_COLORS) s.dice.location[c] = 'pool';
+  for (const c of DIE_COLORS) {
+    s.dice.location[c] = 'pool';
+    s.dice.field[c] = null;
+  }
   s.dice.chosenOrder = [];
   s.extraUsed = s.players.map(() => []);
   rollDice(s, [...DIE_COLORS]);
@@ -155,7 +198,7 @@ function startActiveTurn(s: GameState) {
 function startRound(s: GameState) {
   s.round += 1;
   s.turnInRound = 0;
-  const bonus = ROUND_BONUS[s.round - 1];
+  const bonus = variantFor(s.mode).roundBonus(s.round);
   if (bonus) {
     for (let p = 0; p < s.players.length; p++) grant(s, p, [bonus]);
   }
@@ -171,6 +214,7 @@ function startSoloPassiveTurn(s: GameState) {
   s.dice.chosenOrder = [];
   order.forEach((c, i) => {
     s.dice.location[c] = i < 3 ? 'platter' : 'chosen';
+    s.dice.field[c] = i < 3 ? null : i - 3;
     if (i >= 3) s.dice.chosenOrder.push(c);
   });
   s.extraUsed = s.players.map(() => []);
@@ -192,31 +236,60 @@ function endTurn(s: GameState) {
   }
 }
 
-function writeDie(s: GameState, player: number, color: DieColor, target: Target) {
+function checkPretend(s: GameState, player: number, as: Pretend | undefined) {
+  if (!as) return;
+  const v = variantFor(s.mode);
+  const choice = v.anyNumberChoices(sheetOf(s, player)).find((c) => c.slot === as.slot);
+  if (!choice) fail('that "any number" action is not available');
+  if (as.value < 1 || as.value > 6 || !Number.isInteger(as.value)) fail('number must be 1 to 6');
+  if (choice.value !== null && choice.value !== as.value) fail(`that action can only be used as a ${choice.value}`);
+}
+
+function writeDie(s: GameState, player: number, color: DieColor, target: unknown, as?: Pretend) {
+  const v = variantFor(s.mode);
+  checkPretend(s, player, as);
   const sheet = sheetOf(s, player);
-  const legal = targetsForDie(sheet, s.dice, color);
-  if (!legal.some((t) => sameTarget(t, target))) fail(`the ${color} die cannot be written there`);
-  const value = dieValueFor(s.dice, color, target.area);
-  log(s, player, `${color} ${value} → ${target.area}`);
-  grant(s, player, applyTarget(sheet, target, value));
+  const legal = targetsFor(s, player, color, as);
+  if (!legal.some((t) => v.sameTarget(t, target))) fail(`the ${v.dieLabel[color]} die cannot be written there`);
+  const values = valuesFor(s, color, as);
+  if (as) {
+    v.useAnyNumber(sheet, as.slot);
+    log(s, player, `${v.dieLabel[color]} ${values.real[color]} used as ${as.value}`);
+  }
+  log(s, player, `${v.dieLabel[color]} ${values.value} → ${v.describeTarget(target)}`);
+  grant(s, player, v.apply(sheet, target, values, contextFor(s, color)));
+}
+
+function finishRoll(s: GameState, step: number) {
+  const pool = diceAt(s, 'pool');
+  if (step >= 3 || pool.length === 0) {
+    for (const c of pool) s.dice.location[c] = 'platter';
+    s.phase = { kind: 'activeExtra' };
+  } else {
+    rollDice(s, pool);
+    s.phase = { kind: 'active', step };
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
-export function newGame(names: string[], seed: number = randomSeed()): GameState {
+export function newGame(names: string[], mode: GameMode = 'clever', seed: number = randomSeed()): GameState {
   if (names.length < 1 || names.length > 4) fail('1 to 4 players');
+  const v = variantFor(mode);
   const values = Object.fromEntries(DIE_COLORS.map((c) => [c, 1])) as DiceState['values'];
   const location = Object.fromEntries(DIE_COLORS.map((c) => [c, 'pool'])) as DiceState['location'];
+  const field = Object.fromEntries(DIE_COLORS.map((c) => [c, null])) as DiceState['field'];
   const s: GameState = {
-    players: names.map((name) => ({ name, sheet: newSheet() })),
+    mode,
+    players: names.map((name) => ({ name, sheet: v.newSheet() })),
     solo: names.length === 1,
     totalRounds: ROUNDS_BY_PLAYER_COUNT[names.length],
     round: 0,
     activePlayer: 0,
     turnInRound: 0,
-    dice: { values, location, chosenOrder: [] },
+    dice: { values, location, chosenOrder: [], field },
     phase: { kind: 'active', step: 0 },
     pending: [],
     extraUsed: names.map(() => []),
@@ -230,16 +303,26 @@ export function newGame(names: string[], seed: number = randomSeed()): GameState
 /** Applies an action and returns the new state. Throws RuleError on illegal actions. */
 export function reduce(prev: GameState, action: Action): GameState {
   const s = structuredClone(prev);
+  const v = variantFor(s.mode);
   if (s.phase.kind === 'gameOver') fail('game is over');
 
   if (action.type === 'resolve') {
     const head = s.pending[0];
     if (!head) fail('nothing to resolve');
     const sheet = sheetOf(s, head.player);
-    if (!bonusTargets(sheet, head.bonus).some((t) => sameTarget(t, action.target))) fail('invalid bonus target');
+    if (!v.bonusTargets(sheet, head.bonus, s.dice.values).some((t) => v.sameTarget(t, action.target))) fail('invalid bonus target');
     s.pending.shift();
-    log(s, head.player, `Bonus ${describeBonus(head.bonus)} → ${action.target.area}`);
-    grant(s, head.player, applyBonusAt(sheet, head.bonus, action.target), true);
+    log(s, head.player, `Bonus ${v.describeBonus(head.bonus)} → ${v.describeTarget(action.target)}`);
+    grant(s, head.player, v.applyBonusAt(sheet, head.bonus, action.target), true);
+    return s;
+  }
+  if (action.type === 'skipBonus') {
+    const head = s.pending[0];
+    if (!head) fail('nothing to skip');
+    if (!head.optional) fail('this bonus must be used');
+    s.pending.shift();
+    log(s, head.player, `${v.describeBonus(head.bonus)} skipped`);
+    normalizePending(s);
     return s;
   }
   if (s.pending.length > 0) fail('a bonus must be resolved first');
@@ -247,43 +330,43 @@ export function reduce(prev: GameState, action: Action): GameState {
   switch (action.type) {
     case 'reroll': {
       if (!canReroll(s)) fail('cannot re-roll now');
-      sheetOf(s, s.activePlayer).rerollsUsed += 1;
+      v.useReroll(sheetOf(s, s.activePlayer));
       rollDice(s, diceAt(s, 'pool'));
       log(s, s.activePlayer, 'Re-roll');
+      return s;
+    }
+    case 'pass': {
+      if (!canPass(s)) fail('cannot pass this roll');
+      if (s.phase.kind !== 'active') fail('not the active picking phase');
+      log(s, s.activePlayer, `roll ${s.phase.step + 1} forfeited`);
+      finishRoll(s, s.phase.step + 1);
       return s;
     }
     case 'pick': {
       if (s.phase.kind !== 'active') fail('not the active picking phase');
       if (s.dice.location[action.color] !== 'pool') fail('die not available');
-      const sheet = sheetOf(s, s.activePlayer);
-      if (action.target) {
-        writeDie(s, s.activePlayer, action.color, action.target);
+      if (action.target !== null) {
+        writeDie(s, s.activePlayer, action.color, action.target, action.as);
       } else {
-        if (targetsForDie(sheet, s.dice, action.color).length > 0) fail('this die can be used and must be written');
-        log(s, s.activePlayer, `${action.color} ${s.dice.values[action.color]} taken without marking`);
+        if (v.unusableRoll !== 'takeDie') fail('choose a box or pass the roll');
+        if (targetsFor(s, s.activePlayer, action.color).length > 0) fail('this die can be used and must be written');
+        log(s, s.activePlayer, `${v.dieLabel[action.color]} ${s.dice.values[action.color]} taken without marking`);
       }
       const chosenValue = s.dice.values[action.color];
       s.dice.location[action.color] = 'chosen';
+      s.dice.field[action.color] = s.phase.step;
       s.dice.chosenOrder.push(action.color);
       for (const c of diceAt(s, 'pool')) {
         if (s.dice.values[c] < chosenValue) s.dice.location[c] = 'platter';
       }
-      const step = s.phase.step + 1;
-      const pool = diceAt(s, 'pool');
-      if (step >= 3 || pool.length === 0) {
-        for (const c of pool) s.dice.location[c] = 'platter';
-        s.phase = { kind: 'activeExtra' };
-      } else {
-        rollDice(s, pool);
-        s.phase = { kind: 'active', step };
-      }
+      finishRoll(s, s.phase.step + 1);
       return s;
     }
     case 'plusOne': {
       const player = currentPlayer(s);
       if (!plusOneCandidates(s, player).includes(action.color)) fail('cannot use +1 with this die now');
-      writeDie(s, player, action.color, action.target);
-      sheetOf(s, player).plusOnesUsed += 1;
+      writeDie(s, player, action.color, action.target, action.as);
+      v.usePlusOne(sheetOf(s, player));
       s.extraUsed[player].push(action.color);
       return s;
     }
@@ -297,7 +380,7 @@ export function reduce(prev: GameState, action: Action): GameState {
       if (s.phase.kind !== 'passive' || s.phase.picked) fail('not a passive pick');
       const player = s.phase.player;
       if (!passiveCandidates(s, player).includes(action.color)) fail('die not available to you');
-      writeDie(s, player, action.color, action.target);
+      writeDie(s, player, action.color, action.target, action.as);
       s.phase = { ...s.phase, picked: true };
       return s;
     }

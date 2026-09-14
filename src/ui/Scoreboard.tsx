@@ -1,15 +1,10 @@
-import { scoreSheet, winners } from "../game/rules";
-import { soloRating } from "../game/sheet";
-import type { GameState } from "../game/types";
+import { variantFor } from '../game/engine';
+import type { GameState } from '../game/types';
+import { winners } from '../game/variant';
 
-export function Scoreboard({
-  game,
-  final,
-}: {
-  game: GameState;
-  final?: boolean;
-}) {
-  const scores = game.players.map((p) => scoreSheet(p.sheet));
+export function Scoreboard({ game, final }: { game: GameState; final?: boolean }) {
+  const v = variantFor(game.mode);
+  const scores = game.players.map((p) => v.score(p.sheet));
   const win = final ? winners(scores) : [];
   return (
     <div className="scoreboard-wrap">
@@ -17,42 +12,31 @@ export function Scoreboard({
         <thead>
           <tr>
             <th>Player</th>
-            <th className="sc-yellow">Y</th>
-            <th className="sc-blue">B</th>
-            <th className="sc-green">G</th>
-            <th className="sc-orange">O</th>
-            <th className="sc-purple">P</th>
+            {v.areas.map((a) => (
+              <th key={a.key} style={{ background: a.color, color: a.key === 'yellow' ? '#1f2430' : '#fff' }} title={a.label}>
+                {a.short}
+              </th>
+            ))}
             <th>🦊</th>
             <th>Total</th>
           </tr>
         </thead>
         <tbody>
           {game.players.map((p, i) => (
-            <tr key={i} className={win.includes(i) ? "winner" : ""}>
+            <tr key={i} className={win.includes(i) ? 'winner' : ''}>
               <td>
                 {p.name}
-                {win.includes(i) && " 🏆"}
+                {win.includes(i) && ' 🏆'}
               </td>
-              <td>{scores[i].yellow}</td>
-              <td>{scores[i].blue}</td>
-              <td>{scores[i].green}</td>
-              <td>{scores[i].orange}</td>
-              <td>{scores[i].purple}</td>
+              {scores[i].areas.map((a) => (
+                <td key={a.key}>{a.points}</td>
+              ))}
               <td>
-                {scores[i].foxes}×
-                {Math.min(
-                  scores[i].yellow,
-                  scores[i].blue,
-                  scores[i].green,
-                  scores[i].orange,
-                  scores[i].purple,
-                )}
+                {scores[i].foxes}×{Math.min(...scores[i].areas.map((a) => a.points))}
               </td>
               <td>
                 <strong>{scores[i].total}</strong>
-                {final && game.solo && (
-                  <div className="rating">{soloRating(scores[i].total)}</div>
-                )}
+                {final && game.solo && <div className="rating">{v.soloRating(scores[i].total)}</div>}
               </td>
             </tr>
           ))}

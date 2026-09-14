@@ -12,6 +12,7 @@ const PIPS: Record<number, number[]> = {
 
 export function Die({
   color,
+  label,
   value,
   selectable,
   selected,
@@ -19,6 +20,7 @@ export function Die({
   onClick,
 }: {
   color: DieColor;
+  label?: string;
   value: number;
   selectable?: boolean;
   selected?: boolean;
@@ -28,7 +30,7 @@ export function Die({
 }) {
   const cls = ['die', `die-${color}`, selectable ? 'selectable' : '', selected ? 'selected' : '', discard ? 'discard' : ''].join(' ');
   return (
-    <button type="button" className={cls} disabled={!selectable} onClick={onClick} aria-label={`${color} die showing ${value}`}>
+    <button type="button" className={cls} disabled={!selectable} onClick={onClick} aria-label={`${label ?? color} die showing ${value}`}>
       {Array.from({ length: 9 }, (_, i) => (
         <span key={i} className={PIPS[value].includes(i) ? 'pip' : 'pip empty'} />
       ))}
@@ -38,12 +40,14 @@ export function Die({
 
 export function DiceTray({
   game,
+  labels,
   selectable,
   selected,
   discarding = [],
   onSelect,
 }: {
   game: GameState;
+  labels?: Record<DieColor, string>;
   selectable: DieColor[];
   selected: DieColor | null;
   discarding?: DieColor[];
@@ -57,6 +61,7 @@ export function DiceTray({
     <Die
       key={c}
       color={c}
+      label={labels?.[c]}
       value={dice.values[c]}
       selectable={selectable.includes(c)}
       selected={selected === c}

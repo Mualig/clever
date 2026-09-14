@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canReroll, currentPlayer, newGame, passiveCandidates, plusOneCandidates, reduce, RuleError } from './engine';
+import { canReroll, currentPlayer, newGame, passiveCandidates, plusOneCandidates, reduce, RuleError, targetsFor, pendingTargets } from './engine';
 import { bonusTargets, legalTargets, markBlue, markYellow, newSheet, recordOrange, recordPurple, scoreSheet, targetsForDie, winners } from './rules';
 import {
   ACTION_SLOTS,
@@ -15,7 +15,7 @@ import {
   YELLOW_ROW_BONUS,
   type Bonus,
 } from './sheet';
-import type { DiceState, GameState } from './types';
+import type { DiceState, GameState, Sheet, Target } from './types';
 
 const countBonus = (type: Bonus['type']) =>
   [...YELLOW_ROW_BONUS, YELLOW_DIAGONAL_BONUS, ...BLUE_ROW_BONUS, ...BLUE_COLUMN_BONUS, ...GREEN_BONUS, ...ORANGE_BONUS, ...PURPLE_BONUS, ...ROUND_BONUS]
@@ -94,6 +94,7 @@ describe('legal targets', () => {
     values: { white: 1, yellow: 1, green: 1, blue: 1, orange: 1, purple: 1, ...values },
     location: Object.fromEntries(DIE_COLORS.map((c) => [c, 'pool'])) as DiceState['location'],
     chosenOrder: [],
+    field: Object.fromEntries(DIE_COLORS.map((c) => [c, null])) as DiceState['field'],
   });
   it('green respects thresholds', () => {
     const s = newSheet();
@@ -111,31 +112,32 @@ describe('legal targets', () => {
     expect(white).toContainEqual({ area: 'green' });
   });
   it('round four choice offers yellow, blue, green, orange and purple', () => {
-    const t = bonusTargets(newSheet(), { type: 'roundFour' });
+    const t: Target[] = bonusTargets(newSheet(), { type: 'roundFour' });
     expect(new Set(t.map((x) => x.area))).toEqual(new Set(['yellow', 'blue', 'green', 'orange', 'purple']));
   });
 });
 
+const sheet = (s: GameState, p: number) => s.players[p].sheet as Sheet;
 const pool = (s: GameState) => DIE_COLORS.filter((c) => s.dice.location[c] === 'pool');
 const platter = (s: GameState) => DIE_COLORS.filter((c) => s.dice.location[c] === 'platter');
 
 describe('engine', () => {
   it('sets up rounds and grants the round 1 re-roll', () => {
-    const g = newGame(['A', 'B', 'C'], 42);
+    const g = newGame(['A', 'B', 'C'], 'clever', 42);
     expect(g.totalRounds).toBe(5);
     expect(g.round).toBe(1);
-    expect(g.players.every((p) => p.sheet.rerollsUnlocked === 1)).toBe(true);
+    expect(g.players.every((p) => (p.sheet as Sheet).rerollsUnlocked === 1)).toBe(true);
     expect(g.phase).toEqual({ kind: 'active', step: 0 });
     expect(pool(g)).toHaveLength(6);
     expect(canReroll(g)).toBe(true);
   });
 
   it('moves lower dice to the platter after a pick', () => {
-    const g = newGame(['A', 'B'], 7);
+    const g = newGame(['A', 'B'], 'clever', 7);
     // orange accepts anything: pick the orange die
     const v = g.dice.values.orange;
     const g2 = reduce(g, { type: 'pick', color: 'orange', target: { area: 'orange' } });
-    expect(g2.players[0].sheet.orange).toEqual([v]);
+    expect(sheet(g2, 0).orange).toEqual([v]);
     expect(g2.dice.location.orange).toBe('chosen');
     for (const c of DIE_COLORS) {
       if (c === 'orange') continue;
@@ -145,47 +147,46 @@ describe('engine', () => {
   });
 
   it('rejects illegal writes and unavailable dice', () => {
-    const g = newGame(['A', 'B'], 7);
+    const g = newGame(['A', 'B'], 'clever', 7);
     expect(() => reduce(g, { type: 'pick', color: 'orange', target: { area: 'purple' } })).toThrow(RuleError);
     expect(() => reduce(g, { type: 'pick', color: 'orange', target: null })).toThrow(RuleError);
     expect(() => reduce(g, { type: 'endActive' })).toThrow(RuleError);
   });
 
   it('re-roll consumes an action', () => {
-    const g = newGame(['A', 'B'], 7);
+    const g = newGame(['A', 'B'], 'clever', 7);
     const g2 = reduce(g, { type: 'reroll' });
-    expect(g2.players[0].sheet.rerollsUsed).toBe(1);
+    expect(sheet(g2, 0).rerollsUsed).toBe(1);
     expect(canReroll(g2)).toBe(false);
   });
 
   it('plays a full 2-player game to the end', () => {
-    let g = newGame(['A', 'B'], 123);
+    let g = newGame(['A', 'B'], 'clever', 123);
     let guard = 0;
     while (g.phase.kind !== 'gameOver' && guard++ < 10000) {
       const p = currentPlayer(g);
       if (g.pending.length) {
-        const t = bonusTargets(g.players[p].sheet, g.pending[0].bonus)[0];
-        g = reduce(g, { type: 'resolve', target: t });
+        g = reduce(g, { type: 'resolve', target: pendingTargets(g)[0] });
         continue;
       }
       switch (g.phase.kind) {
         case 'active': {
           const color = pool(g)[0];
-          const t = targetsForDie(g.players[p].sheet, g.dice, color)[0] ?? null;
+          const t = targetsFor(g, p, color)[0] ?? null;
           g = reduce(g, { type: 'pick', color, target: t });
           break;
         }
         case 'activeExtra': {
           const extra = plusOneCandidates(g, p);
           if (extra.length) {
-            g = reduce(g, { type: 'plusOne', color: extra[0], target: targetsForDie(g.players[p].sheet, g.dice, extra[0])[0] });
+            g = reduce(g, { type: 'plusOne', color: extra[0], target: targetsFor(g, p, extra[0])[0] });
           } else g = reduce(g, { type: 'endActive' });
           break;
         }
         case 'passive': {
           if (!g.phase.picked) {
             const cands = passiveCandidates(g, p);
-            if (cands.length) g = reduce(g, { type: 'passivePick', color: cands[0], target: targetsForDie(g.players[p].sheet, g.dice, cands[0])[0] });
+            if (cands.length) g = reduce(g, { type: 'passivePick', color: cands[0], target: targetsFor(g, p, cands[0])[0] });
             else g = reduce(g, { type: 'passiveSkip' });
           } else g = reduce(g, { type: 'passiveDone' });
           break;
@@ -195,19 +196,20 @@ describe('engine', () => {
     expect(g.phase.kind).toBe('gameOver');
     expect(g.round).toBe(6);
     for (const p of g.players) {
-      expect(scoreSheet(p.sheet).total).toBeGreaterThan(0);
-      expect(p.sheet.rerollsUsed).toBeLessThanOrEqual(p.sheet.rerollsUnlocked);
-      expect(p.sheet.plusOnesUsed).toBeLessThanOrEqual(p.sheet.plusOnesUnlocked);
+      const sh = p.sheet as Sheet;
+      expect(scoreSheet(sh).total).toBeGreaterThan(0);
+      expect(sh.rerollsUsed).toBeLessThanOrEqual(sh.rerollsUnlocked);
+      expect(sh.plusOnesUsed).toBeLessThanOrEqual(sh.plusOnesUnlocked);
     }
   });
 
   it('solo: passive turn puts the three lowest dice on the platter', () => {
-    let g = newGame(['Solo'], 99);
+    let g = newGame(['Solo'], 'clever', 99);
     expect(g.totalRounds).toBe(6);
     while (g.phase.kind === 'active') {
       if (g.pending.length) throw new Error('unexpected pending');
       const color = pool(g)[0];
-      g = reduce(g, { type: 'pick', color, target: targetsForDie(g.players[0].sheet, g.dice, color)[0] ?? null });
+      g = reduce(g, { type: 'pick', color, target: targetsFor(g, 0, color)[0] ?? null });
     }
     g = reduce(g, { type: 'endActive' });
     expect(g.phase).toEqual({ kind: 'passive', player: 0, picked: false });

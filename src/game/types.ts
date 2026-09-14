@@ -1,4 +1,5 @@
 import type { AreaColor, Bonus, DieColor } from './sheet';
+import type { GameMode } from './variant';
 
 export interface Sheet {
   /** 16 cells row-major; pre-printed crosses start as true. */
@@ -19,7 +20,8 @@ export interface Sheet {
 
 export interface PlayerState {
   name: string;
-  sheet: Sheet;
+  /** Sheet of the game's variant (`Sheet` for the base game, `Sheet3` for Clever hoch Drei). */
+  sheet: unknown;
 }
 
 export type DieLocation = 'pool' | 'chosen' | 'platter';
@@ -29,6 +31,14 @@ export interface DiceState {
   location: Record<DieColor, DieLocation>;
   /** Order in which dice were placed on the active player's die fields. */
   chosenOrder: DieColor[];
+  /** Die-field index (0..2) a chosen die sits on. */
+  field: Record<DieColor, number | null>;
+}
+
+/** Pretend the chosen die shows `value`, paid with "any number" action `slot`. */
+export interface Pretend {
+  slot: number;
+  value: number;
 }
 
 export type Target =
@@ -40,7 +50,8 @@ export type Target =
 
 export interface PendingChoice {
   player: number;
-  bonus: Bonus;
+  bonus: unknown;
+  optional: boolean;
 }
 
 export type Phase =
@@ -59,6 +70,7 @@ export interface LogEntry {
 }
 
 export interface GameState {
+  mode: GameMode;
   players: PlayerState[];
   solo: boolean;
   totalRounds: number;
@@ -78,11 +90,14 @@ export interface GameState {
 
 export type Action =
   | { type: 'reroll' }
-  | { type: 'pick'; color: DieColor; target: Target | null }
-  | { type: 'resolve'; target: Target }
-  | { type: 'plusOne'; color: DieColor; target: Target }
+  | { type: 'pick'; color: DieColor; target: unknown | null; as?: Pretend }
+  /** Forfeit the current roll without placing a die (Clever hoch Drei). */
+  | { type: 'pass' }
+  | { type: 'resolve'; target: unknown }
+  | { type: 'skipBonus' }
+  | { type: 'plusOne'; color: DieColor; target: unknown; as?: Pretend }
   | { type: 'endActive' }
-  | { type: 'passivePick'; color: DieColor; target: Target }
+  | { type: 'passivePick'; color: DieColor; target: unknown; as?: Pretend }
   | { type: 'passiveSkip' }
   | { type: 'passiveDone' };
 
