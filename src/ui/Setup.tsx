@@ -4,6 +4,7 @@ import type { GameMode } from '../game/variant';
 
 const MODES: { id: GameMode; title: string; subtitle: string }[] = [
   { id: 'clever', title: 'Ganz schön clever', subtitle: 'The original (2018)' },
+  { id: 'clever2', title: 'Doppelt so clever', subtitle: 'Twice as Clever (2019)' },
   { id: 'clever3', title: 'Clever hoch Drei', subtitle: 'Ganz schön clever 3 / Clever Cubed (2020)' },
 ];
 
@@ -86,6 +87,14 @@ export function Setup({
         {mode === 'clever' ? (
           <ul>
             <li>Purple numbers must each be higher than the previous one. After a 6 the chain resets and any value may follow.</li>
+          </ul>
+        ) : mode === 'clever2' ? (
+          <ul>
+            <li>Silver: mark the die's number in any coloured row. Dice that the silver die sweeps onto the platter may be marked there too. Completed columns give bonuses; rows score by count.</li>
+            <li>Yellow: a first yellow die circles its number, a second one crosses it. Rows and columns completed with circles give bonuses; only crosses score.</li>
+            <li>Blue: blue + white, left to right, each number at most the previous one. Green: die × multiplier; every pair scores first minus second. Pink: any number; the bonus below needs the printed minimum.</li>
+            <li>Return action (active player, before a roll): take a die back from the silver platter into the next roll.</li>
+            <li>"?" bonuses: write any number in that area (2–12 for blue). The black "?" of round 4 lets you choose the area. A roll you cannot use is forfeited.</li>
           </ul>
         ) : (
           <ul>

@@ -57,6 +57,8 @@ export interface PendingChoice {
 export type Phase =
   /** Active player has rolled and must pick a die (or re-roll). `step` = die field 0..2. */
   | { kind: 'active'; step: number }
+  /** Active player may return platter dice before roll `step + 1` is thrown (Doppelt so clever). */
+  | { kind: 'beforeRoll'; step: number }
   /** Active player finished picking and may use +1 actions before ending the turn. */
   | { kind: 'activeExtra' }
   /** A passive player picks from the silver platter, then may use +1 actions. */
@@ -93,6 +95,10 @@ export type Action =
   | { type: 'pick'; color: DieColor; target: unknown | null; as?: Pretend }
   /** Forfeit the current roll without placing a die (Clever hoch Drei). */
   | { type: 'pass' }
+  /** Return action: bring a silver-platter die back into the next roll. */
+  | { type: 'returnDie'; color: DieColor }
+  /** Throw the next roll (leaves the `beforeRoll` phase). */
+  | { type: 'roll' }
   | { type: 'resolve'; target: unknown }
   | { type: 'skipBonus' }
   | { type: 'plusOne'; color: DieColor; target: unknown; as?: Pretend }

@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { canPass, canReroll, currentPlayer, diceAt, passiveCandidates, pendingTargets, plusOneCandidates, reduce, RuleError, targetsFor, variantFor } from '../game/engine';
+import type { Sheet2, Target2 } from '../game/rules2';
 import type { Sheet3, Target3 } from '../game/rules3';
 import type { DieColor } from '../game/sheet';
 import type { Action, GameState, Pretend, Sheet, Target } from '../game/types';
 import { DiceTray } from './DiceTray';
 import { Scoreboard } from './Scoreboard';
 import { SheetView } from './SheetView';
+import { SheetView2 } from './SheetView2';
 import { SheetView3 } from './SheetView3';
 
-type Mode = 'bonus' | 'pick' | 'passivePick' | 'extra' | 'over';
+type Mode = 'bonus' | 'pick' | 'roll' | 'passivePick' | 'extra' | 'over';
 
 interface Props {
   game: GameState;
@@ -54,6 +56,8 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
     ? 'bonus'
     : phase.kind === 'active'
       ? 'pick'
+      : phase.kind === 'beforeRoll'
+        ? 'roll'
       : phase.kind === 'activeExtra'
         ? 'extra'
         : phase.kind === 'passive'
@@ -64,7 +68,15 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
 
   const sheet = game.players[player]?.sheet;
   const selectable: DieColor[] =
-    mode === 'pick' ? diceAt(game, 'pool') : mode === 'passivePick' ? passiveCandidates(game, player) : mode === 'extra' ? plusOneCandidates(game, player) : [];
+    mode === 'pick'
+      ? diceAt(game, 'pool')
+      : mode === 'roll'
+        ? diceAt(game, 'platter')
+        : mode === 'passivePick'
+          ? passiveCandidates(game, player)
+          : mode === 'extra'
+            ? plusOneCandidates(game, player)
+            : [];
 
   // Keep the selection valid, and preselect when there is no real choice of die.
   useEffect(() => {
@@ -104,6 +116,10 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
   };
 
   const selectDie = (c: DieColor) => {
+    if (mode === 'roll') {
+      dispatch({ type: 'returnDie', color: c });
+      return;
+    }
     setSelected(selected === c ? null : c);
     setAs(null);
     setFreeSlot(null);
@@ -111,6 +127,17 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
 
   const renderSheet = (p: number, own: boolean) => {
     const s = game.players[p].sheet;
+    if (game.mode === 'clever2') {
+      return (
+        <SheetView2
+          sheet={s as Sheet2}
+          round={game.round}
+          totalRounds={game.totalRounds}
+          targets={own ? (targets as Target2[]) : []}
+          onTarget={own ? onTarget : undefined}
+        />
+      );
+    }
     if (game.mode === 'clever3') {
       return (
         <SheetView3
@@ -175,6 +202,8 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
           ? 'This die fits nowhere on your sheet. You can still take it to keep it off the platter.'
           : 'This die fits nowhere on your sheet. Pick another die, use an "any number" action, or forfeit the roll.';
     }
+  } else if (mode === 'roll' && phase.kind === 'beforeRoll') {
+    instruction = `Before roll ${phase.step + 1}: click a platter die to return it into the roll (${v.returnsLeft(sheet)} left), or roll now.`;
   } else if (mode === 'passivePick') {
     const fromActive = selectable.length > 0 && !selectable.every((c) => game.dice.location[c] === 'platter');
     instruction = selectable.length
@@ -319,6 +348,11 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
                     </button>
                   )}
                 </>
+              )}
+              {mode === 'roll' && (
+                <button type="button" className="btn primary" onClick={() => dispatch({ type: 'roll' })}>
+                  Roll the dice
+                </button>
               )}
               {mode === 'passivePick' && (
                 <button type="button" className="btn" onClick={() => dispatch({ type: 'passiveSkip' })}>

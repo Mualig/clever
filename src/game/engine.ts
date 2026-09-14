@@ -1,4 +1,5 @@
 import { clever1 } from './clever1';
+import { clever2 } from './clever2';
 import { clever3 } from './clever3';
 import { nextRandom, randomSeed } from './rng';
 import { DIE_COLORS, ROUNDS_BY_PLAYER_COUNT, type DieColor } from './sheet';
@@ -15,7 +16,7 @@ function fail(msg: string): never {
 type AnyVariant = Variant<any, any, any>;
 
 export function variantFor(mode: GameMode): AnyVariant {
-  return mode === 'clever3' ? clever3 : clever1;
+  return mode === 'clever3' ? clever3 : mode === 'clever2' ? clever2 : clever1;
 }
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,7 @@ export function currentPlayer(s: GameState): number {
   if (s.pending.length > 0) return s.pending[0].player;
   switch (s.phase.kind) {
     case 'active':
+    case 'beforeRoll':
     case 'activeExtra':
       return s.activePlayer;
     case 'passive':
@@ -56,9 +58,10 @@ export function valuesFor(s: GameState, color: DieColor, as?: Pretend): DieValue
 export function contextFor(s: GameState, color: DieColor): PlacementContext {
   const loc = s.dice.location[color];
   const others = (l: DiceState['location'][DieColor]) => DIE_COLORS.filter((c) => c !== color && s.dice.location[c] === l).map((c) => s.dice.values[c]);
-  if (loc === 'platter') return { role: 'passive', field: null, companions: others('platter') };
-  if (loc === 'chosen') return { role: 'active', field: s.dice.field[color], companions: others('chosen') };
-  return { role: 'active', field: s.phase.kind === 'active' ? s.phase.step : null, companions: others('chosen') };
+  if (loc === 'platter') return { role: 'passive', field: null, companions: others('platter'), swept: [] };
+  if (loc === 'chosen') return { role: 'active', field: s.dice.field[color], companions: others('chosen'), swept: [] };
+  const swept = s.phase.kind === 'active' ? others('pool').filter((v) => v < s.dice.values[color]) : [];
+  return { role: 'active', field: s.phase.kind === 'active' ? s.phase.step : null, companions: others('chosen'), swept };
 }
 
 /** All boxes on `player`'s sheet where die `color` can be written now. */
@@ -106,6 +109,11 @@ export function plusOneCandidates(s: GameState, player: number): DieColor[] {
 
 export function canReroll(s: GameState): boolean {
   return s.pending.length === 0 && s.phase.kind === 'active' && variantFor(s.mode).rerollsLeft(sheetOf(s, s.activePlayer)) > 0 && diceAt(s, 'pool').length > 0;
+}
+
+/** Whether the active player may return a platter die into the next roll now. */
+export function canReturn(s: GameState): boolean {
+  return s.pending.length === 0 && s.phase.kind === 'beforeRoll' && variantFor(s.mode).returnsLeft(sheetOf(s, s.activePlayer)) > 0 && diceAt(s, 'platter').length > 0;
 }
 
 export function canPass(s: GameState): boolean {
@@ -261,6 +269,14 @@ function writeDie(s: GameState, player: number, color: DieColor, target: unknown
 }
 
 function finishRoll(s: GameState, step: number) {
+  if (step < 3 && variantFor(s.mode).returnsLeft(sheetOf(s, s.activePlayer)) > 0 && diceAt(s, 'platter').length > 0) {
+    s.phase = { kind: 'beforeRoll', step };
+    return;
+  }
+  throwRoll(s, step);
+}
+
+function throwRoll(s: GameState, step: number) {
   const pool = diceAt(s, 'pool');
   if (step >= 3 || pool.length === 0) {
     for (const c of pool) s.dice.location[c] = 'platter';
@@ -333,6 +349,21 @@ export function reduce(prev: GameState, action: Action): GameState {
       v.useReroll(sheetOf(s, s.activePlayer));
       rollDice(s, diceAt(s, 'pool'));
       log(s, s.activePlayer, 'Re-roll');
+      return s;
+    }
+    case 'returnDie': {
+      if (!canReturn(s)) fail('cannot return a die now');
+      if (s.phase.kind !== 'beforeRoll') fail('not before a roll');
+      if (s.dice.location[action.color] !== 'platter') fail('that die is not on the silver platter');
+      v.useReturn(sheetOf(s, s.activePlayer));
+      s.dice.location[action.color] = 'pool';
+      log(s, s.activePlayer, `Return: ${v.dieLabel[action.color]} die back into the roll`);
+      if (!canReturn(s)) throwRoll(s, s.phase.step);
+      return s;
+    }
+    case 'roll': {
+      if (s.phase.kind !== 'beforeRoll') fail('nothing to roll now');
+      throwRoll(s, s.phase.step);
       return s;
     }
     case 'pass': {

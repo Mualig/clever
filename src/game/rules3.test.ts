@@ -40,9 +40,9 @@ describe('Clever hoch Drei sheet data', () => {
 describe('yellow', () => {
   it('active dice are bound to the row of their die field, passive dice to grey cells', () => {
     const s = newSheet3();
-    expect(yellowTargets(s, 3, { role: 'active', field: 1, companions: [] })).toEqual([{ area: 'yellow', row: 1, col: 2 }]);
-    expect(yellowTargets(s, 3, { role: 'passive', field: null, companions: [] })).toEqual([{ area: 'yellow', row: 1, col: 2 }]);
-    expect(yellowTargets(s, 1, { role: 'passive', field: null, companions: [] })).toEqual([{ area: 'yellow', row: 2, col: 0 }]);
+    expect(yellowTargets(s, 3, { role: 'active', field: 1, companions: [], swept: [] })).toEqual([{ area: 'yellow', row: 1, col: 2 }]);
+    expect(yellowTargets(s, 3, { role: 'passive', field: null, companions: [], swept: [] })).toEqual([{ area: 'yellow', row: 1, col: 2 }]);
+    expect(yellowTargets(s, 1, { role: 'passive', field: null, companions: [], swept: [] })).toEqual([{ area: 'yellow', row: 2, col: 0 }]);
     expect(yellowTargets(s, 1, null)).toHaveLength(3);
   });
   it('gives the bonus between two crossed cells', () => {

@@ -64,6 +64,10 @@ export const clever3: Variant<Sheet3, Target3, Bonus3> = {
   usePlusOne: (s) => {
     s.plusOnesUsed += 1;
   },
+  returnsLeft: () => 0,
+  useReturn: () => {
+    throw new Error('no return action in this game');
+  },
   anyNumberChoices: anyNumberChoices3,
   useAnyNumber: (s, slot) => {
     if (slot >= s.anyUnlocked || s.anyUsed[slot]) throw new Error('action not available');

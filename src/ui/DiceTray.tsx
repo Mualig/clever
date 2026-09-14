@@ -70,11 +70,12 @@ export function DiceTray({
     />
   );
   const soloPassive = game.solo && game.phase.kind === 'passive';
+  const toRoll = game.phase.kind === 'beforeRoll';
   return (
     <div className="tray">
       <div className="tray-zone rolled">
-        <div className="tray-label">Rolled</div>
-        <div className="dice-row">{pool.length ? pool.map(render) : <span className="tray-empty">–</span>}</div>
+        <div className="tray-label">{toRoll ? 'Next roll' : 'Rolled'}</div>
+        <div className={`dice-row ${toRoll ? 'unrolled' : ''}`}>{pool.length ? pool.map(render) : <span className="tray-empty">–</span>}</div>
       </div>
       <div className="tray-zone">
         <div className="tray-label">{soloPassive ? 'Not on the platter' : 'Die fields'}</div>

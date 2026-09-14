@@ -44,7 +44,7 @@ export function BonusIcon3({ bonus, earned, lost, big }: { bonus: Bonus3; earned
 }
 
 /** A box that applies its single target on click, or opens a small menu when several targets fit. */
-function OptionCell({
+export function OptionCell<T>({
   className,
   options,
   label,
@@ -52,9 +52,9 @@ function OptionCell({
   children,
 }: {
   className: string;
-  options: Target3[];
-  label: (t: Target3) => string;
-  onPick?: (t: Target3) => void;
+  options: T[];
+  label: (t: T) => string;
+  onPick?: (t: T) => void;
   children?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);

@@ -53,6 +53,10 @@ export const clever1: Variant<Sheet, Target, Bonus> = {
   usePlusOne: (s) => {
     s.plusOnesUsed += 1;
   },
+  returnsLeft: () => 0,
+  useReturn: () => {
+    throw new Error('no return action in this game');
+  },
   anyNumberChoices: () => [],
   useAnyNumber: () => {
     throw new Error('no "any number" action in this game');

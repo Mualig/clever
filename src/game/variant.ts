@@ -1,6 +1,6 @@
 import type { DieColor } from './sheet';
 
-export type GameMode = 'clever' | 'clever3';
+export type GameMode = 'clever' | 'clever2' | 'clever3';
 
 /** Where the chosen die sits, which decides some placement rules (Clever hoch Drei). */
 export interface PlacementContext {
@@ -9,6 +9,8 @@ export interface PlacementContext {
   field: number | null;
   /** Real values of the other dice in the same group (die fields, or silver platter). */
   companions: number[];
+  /** Real values of the dice that this pick sweeps onto the silver platter (active picks only). */
+  swept: number[];
 }
 
 export interface DieValues {
@@ -74,6 +76,9 @@ export interface Variant<S = unknown, T = unknown, B = unknown> {
   useReroll(sheet: S): void;
   plusOnesLeft(sheet: S): number;
   usePlusOne(sheet: S): void;
+  /** Return actions (Doppelt so clever): take a platter die back into the next roll. */
+  returnsLeft(sheet: S): number;
+  useReturn(sheet: S): void;
   anyNumberChoices(sheet: S): AnyNumberChoice[];
   useAnyNumber(sheet: S, slot: number): void;
   score(sheet: S): Scores;
