@@ -48,14 +48,15 @@ The engine is a plain reducer over a serialisable state, so the same code can la
 - Foxes score the lowest area; ties are broken by the best single area. Solo mode alternates active and passive turns
   and shows the rating table.
 
-Doppelt so clever adds: the silver area (mark the die's number in any coloured row; dice swept onto the platter by the
-silver die may be marked as well, column bonuses, rows score by count), the yellow lattice (circle first, cross second;
+Doppelt so clever adds: the silver area (the silver die marks its number in any coloured row; dice swept onto the
+platter by the silver die may be marked as well, each in the row of its own colour, with the wild white die and the
+silver die free to use any row; only dice with a lower value than the silver die count as swept, so the higher dice
+left over after the third roll do not; column bonuses, rows score by count), the yellow lattice (circle first, cross second;
 lines of circles give bonuses, only crosses score), blue sums that must not increase, green pairs scoring first − second
 (die × multiplier), pink numbers whose bonus needs the printed minimum, "?" bonuses, the Return action (active player
 only, before a roll: take a platter die back into the next roll), row-end bonuses on the action tracks and forfeited
-rolls. Interpretation choices: only dice with a lower value than the silver die count as swept (the higher dice left
-over after the third roll do not); several Return actions may be used before the same roll; a negative green total
-counts as the lowest area for the foxes.
+rolls. Interpretation choices: several Return actions may be used before the same roll; a negative green total counts
+as the lowest area for the foxes.
 
 Clever hoch Drei adds: yellow rows bound to the die fields I–III (grey cells only from the platter), turquoise
 multi-crosses for matching dice, the blue ±1 chain with 7 as reset and +4 for 2–4 / 10–12, brown left-to-right crossing

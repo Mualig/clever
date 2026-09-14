@@ -84,6 +84,15 @@ export function areaOfDie2(color: DieColor): Area2 | null {
 
 export const AREAS2: readonly Area2[] = ['silver', 'yellow', 'blue', 'green', 'pink'];
 
+/**
+ * Silver row a die swept onto the platter must be marked in. The white die is wild and
+ * the silver die has no row of its own, so both may be marked in any row.
+ */
+export function silverRowFor(color: DieColor): number | null {
+  const area = areaOfDie2(color);
+  return area === null || area === 'silver' ? null : SILVER_ROWS.indexOf(area);
+}
+
 export function sameTarget2(a: Target2, b: Target2): boolean {
   if (a.area !== b.area) return false;
   switch (a.area) {
@@ -117,9 +126,12 @@ export function describeTarget2(t: Target2): string {
 // Legal targets
 // ---------------------------------------------------------------------------
 
-export function silverTargets(s: Sheet2, value: number): Target2[] {
+/** `only` restricts the mark to one row; null or omitted allows any row. */
+export function silverTargets(s: Sheet2, value: number, only?: number | null): Target2[] {
   const col = value - 1;
-  return SILVER_ROWS.flatMap((_, row) => (s.silver[row][col] ? [] : [{ area: 'silver' as const, row, col }]));
+  return SILVER_ROWS.flatMap((_, row) =>
+    s.silver[row][col] || (only != null && row !== only) ? [] : [{ area: 'silver' as const, row, col }],
+  );
 }
 
 export function yellowTargets(s: Sheet2, value: number): Target2[] {
@@ -249,7 +261,7 @@ const NUMBERS = [1, 2, 3, 4, 5, 6];
 
 /** Boxes a "?"-bonus (or extra silver mark) may be applied to. */
 export function bonusTargets2(s: Sheet2, b: Bonus2): Target2[] {
-  if (b.type === 'sx') return silverTargets(s, b.value);
+  if (b.type === 'sx') return silverTargets(s, b.value, b.row);
   if (b.type !== 'q') return [];
   const forArea = (area: Area2): Target2[] => {
     switch (area) {

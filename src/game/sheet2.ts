@@ -15,8 +15,12 @@ export type Bonus2 =
   | { type: 'fox' }
   /** "?"-bonus: write any number in the area ("any" = black ?, free choice of area). */
   | { type: 'q'; color: Area2 | 'any' }
-  /** Optional extra silver mark for a die swept onto the platter by the silver die. */
-  | { type: 'sx'; value: number };
+  /**
+   * Optional extra silver mark for a die swept onto the platter by the silver die.
+   * `row` is the silver row the die's colour forces; null for the wild white and
+   * silver dice, which may be marked in any row.
+   */
+  | { type: 'sx'; value: number; row: number | null };
 
 const reroll: Bonus2 = { type: 'reroll' };
 const plusOne: Bonus2 = { type: 'plusOne' };
@@ -108,6 +112,6 @@ export function describeBonus2(b: Bonus2): string {
     case 'q':
       return b.color === 'any' ? '? (any colour)' : `${b.color} ?`;
     case 'sx':
-      return `extra silver ${b.value}`;
+      return b.row === null ? `extra silver ${b.value} (any row)` : `extra silver ${b.value} (${SILVER_ROWS[b.row]} row)`;
   }
 }

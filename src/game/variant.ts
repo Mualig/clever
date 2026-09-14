@@ -2,6 +2,12 @@ import type { DieColor } from './sheet';
 
 export type GameMode = 'clever' | 'clever2' | 'clever3';
 
+/** A die pushed onto the silver platter by the die being placed. */
+export interface SweptDie {
+  color: DieColor;
+  value: number;
+}
+
 /** Where the chosen die sits, which decides some placement rules (Clever hoch Drei). */
 export interface PlacementContext {
   role: 'active' | 'passive';
@@ -9,8 +15,8 @@ export interface PlacementContext {
   field: number | null;
   /** Real values of the other dice in the same group (die fields, or silver platter). */
   companions: number[];
-  /** Real values of the dice that this pick sweeps onto the silver platter (active picks only). */
-  swept: number[];
+  /** The dice that this pick sweeps onto the silver platter (active picks only). */
+  swept: SweptDie[];
 }
 
 export interface DieValues {

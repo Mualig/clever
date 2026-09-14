@@ -11,6 +11,7 @@ import {
   newSheet2,
   sameTarget2,
   score2,
+  silverRowFor,
   type Sheet2,
   type Target2,
 } from './rules2';
@@ -38,8 +39,9 @@ export const clever2: Variant<Sheet2, Target2, Bonus2> = {
   },
   apply(sheet, target, _values, ctx) {
     const bonuses = applyTarget2(sheet, target);
-    // Dice swept onto the silver platter by the silver die may also be marked in the silver area.
-    if (target.area === 'silver') for (const value of ctx.swept) bonuses.push({ type: 'sx', value });
+    // Dice swept onto the silver platter by the silver die may also be marked in the silver
+    // area, each in the row of its own colour (white and silver go in any row).
+    if (target.area === 'silver') for (const d of ctx.swept) bonuses.push({ type: 'sx', value: d.value, row: silverRowFor(d.color) });
     return bonuses;
   },
   sameTarget: sameTarget2,

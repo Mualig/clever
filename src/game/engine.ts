@@ -57,10 +57,16 @@ export function valuesFor(s: GameState, color: DieColor, as?: Pretend): DieValue
 /** Where the die counts as coming from (die fields or silver platter). */
 export function contextFor(s: GameState, color: DieColor): PlacementContext {
   const loc = s.dice.location[color];
-  const others = (l: DiceState['location'][DieColor]) => DIE_COLORS.filter((c) => c !== color && s.dice.location[c] === l).map((c) => s.dice.values[c]);
+  const at = (l: DiceState['location'][DieColor]) => DIE_COLORS.filter((c) => c !== color && s.dice.location[c] === l);
+  const others = (l: DiceState['location'][DieColor]) => at(l).map((c) => s.dice.values[c]);
   if (loc === 'platter') return { role: 'passive', field: null, companions: others('platter'), swept: [] };
   if (loc === 'chosen') return { role: 'active', field: s.dice.field[color], companions: others('chosen'), swept: [] };
-  const swept = s.phase.kind === 'active' ? others('pool').filter((v) => v < s.dice.values[color]) : [];
+  const swept =
+    s.phase.kind === 'active'
+      ? at('pool')
+          .filter((c) => s.dice.values[c] < s.dice.values[color])
+          .map((c) => ({ color: c, value: s.dice.values[c] }))
+      : [];
   return { role: 'active', field: s.phase.kind === 'active' ? s.phase.step : null, companions: others('chosen'), swept };
 }
 

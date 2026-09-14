@@ -158,18 +158,28 @@ describe('engine: silver die sweeps dice that may be marked too', () => {
     expect(t).toHaveLength(4);
     g = reduce(g, { type: 'pick', color: 'orange', target: t[0] });
     expect(g.pending.map((p) => p.bonus)).toEqual([
-      { type: 'sx', value: 2 },
-      { type: 'sx', value: 1 },
+      { type: 'sx', value: 2, row: null },
+      { type: 'sx', value: 1, row: 1 },
     ]);
     expect(g.pending.every((p) => p.optional)).toBe(true);
+    // The wild white 2 may go in any of the four rows.
+    expect(pendingTargets(g)).toHaveLength(4);
     g = reduce(g, { type: 'skipBonus' });
+    // The blue 1 may only go in the blue row.
     const extra = pendingTargets(g) as Target2[];
-    expect(extra.every((e) => e.area === 'silver' && e.col === 0)).toBe(true);
-    g = reduce(g, { type: 'resolve', target: extra[3] });
+    expect(extra).toEqual([{ area: 'silver', row: 1, col: 0 }]);
+    g = reduce(g, { type: 'resolve', target: extra[0] });
     const sheet = g.players[0].sheet as Sheet2;
     expect(sheet.silver[0][3]).toBe(true);
-    expect(sheet.silver[3][0]).toBe(true);
+    expect(sheet.silver[1][0]).toBe(true);
     expect(sheet.silver.flat().filter(Boolean)).toHaveLength(2);
+  });
+  it('lets a silver die swept by the white die be marked in any row', () => {
+    let g = newGame(['A', 'B'], 'clever2', 5);
+    g = setDice(g, { white: 5, orange: 3, yellow: 6, green: 6, blue: 6, purple: 6 });
+    g = reduce(g, { type: 'pick', color: 'white', target: { area: 'silver', row: 0, col: 4 } });
+    expect(g.pending.map((p) => p.bonus)).toEqual([{ type: 'sx', value: 3, row: null }]);
+    expect(pendingTargets(g)).toHaveLength(4);
   });
   it('gives passive players no extra marks', () => {
     let g = newGame(['A', 'B'], 'clever2', 5);
