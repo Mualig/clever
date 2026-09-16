@@ -1,6 +1,6 @@
 {
   "name": "clever",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Play Ganz schön clever (That's Pretty Clever) in the browser",
   "private": true,
   "type": "module",
