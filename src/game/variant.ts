@@ -1,6 +1,6 @@
 import type { DieColor } from './sheet';
 
-export type GameMode = 'clever' | 'clever2' | 'clever3';
+export type GameMode = 'clever' | 'clever2' | 'clever3' | 'clever4';
 
 /** A die pushed onto the silver platter by the die being placed. */
 export interface SweptDie {
@@ -26,6 +26,8 @@ export interface DieValues {
   blue: number;
   /** Real value of every die. */
   real: Record<DieColor, number>;
+  /** Value of every die as it counts for this placement (real, except a die changed by an action). */
+  effective: Record<DieColor, number>;
 }
 
 export interface AreaScore {
@@ -87,6 +89,9 @@ export interface Variant<S = unknown, T = unknown, B = unknown> {
   useReturn(sheet: S): void;
   anyNumberChoices(sheet: S): AnyNumberChoice[];
   useAnyNumber(sheet: S, slot: number): void;
+  /** Polish actions (Clever 4Ever): change a silver-platter die by ±1 per action. */
+  polishLeft(sheet: S): number;
+  usePolish(sheet: S, steps: number): void;
   score(sheet: S): Scores;
   soloRating(total: number): string;
 }

@@ -1,6 +1,7 @@
 import { clever1 } from './clever1';
 import { clever2 } from './clever2';
 import { clever3 } from './clever3';
+import { clever4 } from './clever4';
 import { nextRandom, randomSeed } from './rng';
 import { DIE_COLORS, ROUNDS_BY_PLAYER_COUNT, type DieColor } from './sheet';
 import type { Action, DiceState, GameState, Pretend } from './types';
@@ -16,7 +17,16 @@ function fail(msg: string): never {
 type AnyVariant = Variant<any, any, any>;
 
 export function variantFor(mode: GameMode): AnyVariant {
-  return mode === 'clever3' ? clever3 : mode === 'clever2' ? clever2 : clever1;
+  switch (mode) {
+    case 'clever4':
+      return clever4;
+    case 'clever3':
+      return clever3;
+    case 'clever2':
+      return clever2;
+    default:
+      return clever1;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -49,9 +59,39 @@ export function diceAt(s: GameState, location: DiceState['location'][DieColor]):
 /** Real / pretended values of a chosen die, plus the blue + white sum. */
 export function valuesFor(s: GameState, color: DieColor, as?: Pretend): DieValues {
   const real = s.dice.values;
-  const value = as?.value ?? real[color];
-  const blue = color === 'blue' ? value + real.white : color === 'white' ? real.blue + value : real.blue + real.white;
-  return { value, blue, real };
+  const effective = { ...real };
+  if (as) effective[as.color ?? color] = as.value;
+  return { value: effective[color], blue: effective.blue + effective.white, real, effective };
+}
+
+/**
+ * Dice whose number may be polished when writing die `color`: the die itself when it lies on
+ * the silver platter, and its blue/white partner when that one lies on the platter.
+ */
+export function polishable(s: GameState, color: DieColor): DieColor[] {
+  const out: DieColor[] = [];
+  if (s.dice.location[color] === 'platter') out.push(color);
+  const partner = color === 'blue' ? 'white' : color === 'white' ? 'blue' : null;
+  if (partner && s.dice.location[partner] === 'platter') out.push(partner);
+  return out;
+}
+
+/** Every way `player` could change a die's number with an action when writing die `color` now. */
+export function pretendOptions(s: GameState, player: number, color: DieColor): Pretend[] {
+  const v = variantFor(s.mode);
+  const sheet = sheetOf(s, player);
+  const out: Pretend[] = [];
+  for (const c of v.anyNumberChoices(sheet)) {
+    for (const n of c.value === null ? [1, 2, 3, 4, 5, 6] : [c.value]) out.push({ slot: c.slot, value: n });
+  }
+  const left = v.polishLeft(sheet);
+  if (left > 0) {
+    for (const d of polishable(s, color)) {
+      const real = s.dice.values[d];
+      for (let n = Math.max(1, real - left); n <= Math.min(6, real + left); n++) if (n !== real) out.push({ polish: true, color: d, value: n });
+    }
+  }
+  return out;
 }
 
 /** Where the die counts as coming from (die fields or silver platter). */
@@ -82,10 +122,9 @@ export function pendingTargets(s: GameState): unknown[] {
   return variantFor(s.mode).bonusTargets(sheetOf(s, head.player), head.bonus, s.dice.values);
 }
 
+/** Dice that can be written somewhere, as rolled or after changing their number with an action. */
 function usable(s: GameState, player: number, colors: DieColor[]): DieColor[] {
-  const v = variantFor(s.mode);
-  const canPretend = v.anyNumberChoices(sheetOf(s, player)).length > 0;
-  return colors.filter((c) => canPretend || targetsFor(s, player, c).length > 0);
+  return colors.filter((c) => targetsFor(s, player, c).length > 0 || pretendOptions(s, player, c).some((p) => targetsFor(s, player, c, p).length > 0));
 }
 
 /** Dice a passive player may take: usable platter dice, else usable dice of the active player. */
@@ -250,24 +289,39 @@ function endTurn(s: GameState) {
   }
 }
 
-function checkPretend(s: GameState, player: number, as: Pretend | undefined) {
-  if (!as) return;
+/** Validates a pretended number; returns the polish actions it costs (0 for "any number"). */
+function checkPretend(s: GameState, player: number, color: DieColor, as: Pretend | undefined): number {
+  if (!as) return 0;
   const v = variantFor(s.mode);
+  if (as.value < 1 || as.value > 6 || !Number.isInteger(as.value)) fail('number must be 1 to 6');
+  if (as.polish) {
+    const die = as.color ?? color;
+    if (!polishable(s, color).includes(die)) fail(`the ${v.dieLabel[die]} die is not on the silver platter`);
+    const steps = Math.abs(as.value - s.dice.values[die]);
+    if (steps === 0) fail('polishing must change the number');
+    if (steps > v.polishLeft(sheetOf(s, player))) fail('not enough polish actions');
+    return steps;
+  }
+  if (as.color && as.color !== color) fail('an "any number" action applies to the chosen die');
   const choice = v.anyNumberChoices(sheetOf(s, player)).find((c) => c.slot === as.slot);
   if (!choice) fail('that "any number" action is not available');
-  if (as.value < 1 || as.value > 6 || !Number.isInteger(as.value)) fail('number must be 1 to 6');
   if (choice.value !== null && choice.value !== as.value) fail(`that action can only be used as a ${choice.value}`);
+  return 0;
 }
 
 function writeDie(s: GameState, player: number, color: DieColor, target: unknown, as?: Pretend) {
   const v = variantFor(s.mode);
-  checkPretend(s, player, as);
+  const steps = checkPretend(s, player, color, as);
   const sheet = sheetOf(s, player);
   const legal = targetsFor(s, player, color, as);
   if (!legal.some((t) => v.sameTarget(t, target))) fail(`the ${v.dieLabel[color]} die cannot be written there`);
   const values = valuesFor(s, color, as);
-  if (as) {
-    v.useAnyNumber(sheet, as.slot);
+  if (as?.polish) {
+    const die = as.color ?? color;
+    v.usePolish(sheet, steps);
+    log(s, player, `Polish: ${v.dieLabel[die]} ${values.real[die]} counts as ${as.value} (${steps} action${steps > 1 ? 's' : ''})`);
+  } else if (as) {
+    v.useAnyNumber(sheet, as.slot!);
     log(s, player, `${v.dieLabel[color]} ${values.real[color]} used as ${as.value}`);
   }
   log(s, player, `${v.dieLabel[color]} ${values.value} → ${v.describeTarget(target)}`);

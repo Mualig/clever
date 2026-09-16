@@ -61,6 +61,10 @@ export const clever1: Variant<Sheet, Target, Bonus> = {
   useAnyNumber: () => {
     throw new Error('no "any number" action in this game');
   },
+  polishLeft: () => 0,
+  usePolish: () => {
+    throw new Error('no polish action in this game');
+  },
   score(sheet) {
     const s = scoreSheet(sheet);
     return {

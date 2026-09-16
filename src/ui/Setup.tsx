@@ -6,6 +6,7 @@ const MODES: { id: GameMode; title: string; subtitle: string }[] = [
   { id: 'clever', title: 'Ganz schön clever', subtitle: 'The original (2018)' },
   { id: 'clever2', title: 'Doppelt so clever', subtitle: 'Twice as Clever (2019)' },
   { id: 'clever3', title: 'Clever hoch Drei', subtitle: 'Ganz schön clever 3 / Clever Cubed (2020)' },
+  { id: 'clever4', title: 'Clever 4Ever', subtitle: 'Ganz schön clever 4 (2022)' },
 ];
 
 export function Setup({
@@ -95,6 +96,16 @@ export function Setup({
             <li>Blue: blue + white, left to right, each number at most the previous one. Green: die × multiplier; every pair scores first minus second. Pink: any number; the bonus below needs the printed minimum.</li>
             <li>Return action (active player, before a roll): take a die back from the silver platter into the next roll.</li>
             <li>"?" bonuses: write any number in that area (2–12 for blue). The black "?" of round 4 lets you choose the area. A roll you cannot use is forfeited.</li>
+          </ul>
+        ) : mode === 'clever4' ? (
+          <ul>
+            <li>Yellow: three rows filled left to right, the die may go to any row. The top row must ascend (nothing after a 6) and gives bonuses; the middle row counts minus and gives bonuses; the bottom row counts plus. Full columns score 10/10/15/15/20.</li>
+            <li>Blue: the blue die is the row, the white die the column; cross that cell. Exactly 2 crosses in a row (or on the ↘ diagonal) give the bonus. Columns with 2 crosses score, the ↙ diagonal with 2 crosses scores 6.</li>
+            <li>Grey: the grey die crosses a whole part (a connected group of one shade) of at most the die's number of cells. Start with one of the two parts in the first column, then always touch an existing cross. Full columns score; crossing every cell of a shade gives a fox.</li>
+            <li>Green: each field has an upper and a lower triangle; both rows fill left to right. Lower triangles give the bonus below. A field with both numbers scores their sum, doubled from field 4.</li>
+            <li>Pink: fill left to right. A 2 or 4 is circled (+2 / +4), a 3 writes another 3 right away, a 5 or 6 takes the bonus below (a 6 is also circled, +3). You score the points above your last field.</li>
+            <li>Polish silver (◉): when writing a die from the silver platter, change its number by ±1 per action (no wrap between 1 and 6). Choosing blue lets you polish the white die if it lies on the platter, and vice versa. Works with +1 dice from the platter too.</li>
+            <li>"?" bonuses: choose any number 1–6 and write it as if rolled (blue: any free cell). The black "?" of round 4 lets you choose the area. A roll you cannot use is forfeited.</li>
           </ul>
         ) : (
           <ul>

@@ -460,3 +460,117 @@ th.sc-yellow { color: var(--ink); }
   .g2-row > :nth-child(5) { grid-column: 2; }
   .s2-blue .cell, .s2-green .cell { width: 26px; height: 26px; font-size: 0.7rem; }
 }
+
+/* ---------- Clever 4Ever ---------- */
+:root {
+  --c4-yellow: #e8b400;
+  --c4-blue: #1f8fd6;
+  --c4-grey: #7b7f86;
+  --c4-green: #7cb82f;
+  --c4-pink: #ef6fa8;
+}
+.mode-clever4 .die-orange { background: #9a9ea6; }
+.mode-clever4 .die-purple { background: var(--c4-pink); }
+.mode-clever4 .die-green { background: var(--c4-green); }
+.mode-clever4 .die-blue { background: var(--c4-blue); }
+.mode-clever4 .die-yellow { background: var(--c4-yellow); }
+
+.bonus.b4-yellow { background: var(--c4-yellow); color: var(--ink); }
+.bonus.b4-blue { background: var(--c4-blue); }
+.bonus.b4-grey { background: var(--c4-grey); }
+.bonus.b4-green { background: var(--c4-green); }
+.bonus.b4-pink { background: var(--c4-pink); }
+.bonus.b4-any { background: var(--ink); }
+.bonus.b4-polish { font-size: 1.1rem; }
+
+.sheet4 .areas4 { grid-template-columns: 1fr 1fr; }
+.s4-yellow { background: color-mix(in srgb, var(--c4-yellow) 28%, white); display: flex; flex-direction: column; justify-content: center; }
+.s4-blue { background: color-mix(in srgb, var(--c4-blue) 16%, white); }
+.s4-grey { background: #e4e5e8; grid-column: 1 / -1; }
+.s4-green { background: color-mix(in srgb, var(--c4-green) 22%, white); grid-column: 1 / -1; }
+.s4-pink { background: color-mix(in srgb, var(--c4-pink) 20%, white); grid-column: 1 / -1; }
+.sheet4 .cell { width: var(--tcell); height: var(--tcell); }
+.area-note { font-size: 0.75rem; margin-top: 6px; text-align: center; }
+
+.y4-row, .y4-gap { display: grid; grid-template-columns: 24px repeat(5, minmax(0, 1fr)) 44px; align-items: center; justify-items: center; gap: 3px; }
+.y4-row { height: var(--tcell); }
+.y4-gap { height: 30px; }
+.y4-cols { margin-top: 4px; }
+.y4-label { font-weight: 800; color: rgba(0,0,0,0.5); }
+.y4-cellpos { position: relative; width: 100%; display: flex; justify-content: center; }
+.y4-sep { position: absolute; left: 0; top: 50%; transform: translate(-50%, -50%); font-weight: 800; font-size: 1.1rem; color: #c98f00; pointer-events: none; }
+.sheet4 .row-pts { font-weight: 800; font-size: 0.85rem; color: rgba(0,0,0,0.45); }
+.sheet4 .row-pts.earned { color: var(--ink); }
+
+.b4-grid { display: grid; grid-template-columns: 22px repeat(6, minmax(0, 1fr)) 32px; gap: 3px; align-items: center; justify-items: center; }
+.b4-grid .cell { width: 100%; height: auto; aspect-ratio: 1; max-width: var(--tcell); font-size: 1rem; }
+.b4-grid .cell.diag { background: color-mix(in srgb, var(--c4-blue) 10%, white); }
+.b4-grid .cell.marked { background: #eee; }
+.b4-head { font-weight: 800; font-size: 0.8rem; border-radius: 4px; padding: 1px 0; width: 100%; text-align: center; }
+.b4-head-white { background: #fff; border: 1px solid var(--line); }
+.b4-head-blue { background: var(--c4-blue); color: #fff; }
+.b4-corner { display: flex; gap: 2px; align-items: center; justify-content: center; }
+.b4-die { width: 8px; height: 8px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.3); }
+.b4-die-blue { background: var(--c4-blue); }
+.b4-die-white { background: #fff; }
+
+.g4-scroll { overflow-x: auto; }
+.g4-grid { --gcell: 40px; display: grid; grid-template-columns: repeat(16, var(--gcell)); gap: 2px; justify-content: center; }
+.g4-pts { font-size: 0.72rem; justify-self: center; }
+.sheet4 .cell.g4 { width: var(--gcell); height: var(--gcell); border-radius: 3px; border-color: rgba(0,0,0,0.35); }
+.sheet4 .cell.g4-W { background: #fff; }
+.sheet4 .cell.g4-L { background: #c9cbd0; }
+.sheet4 .cell.g4-D { background: #7f838a; color: #fff; }
+.sheet4 .cell.g4.marked { background-image: linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.25)); }
+.sheet4 .cell.g4-D.marked .x, .sheet4 .cell.g4-L.marked .x { color: var(--ink); }
+.sheet4 .cell.g4-D.marked .x { color: #fff; }
+.sheet4 .cell.g4.start { box-shadow: inset 0 0 0 2px #e0322e; }
+.sheet4 .cell.g4 .bonus { min-width: 22px; height: 22px; font-size: 0.75rem; padding: 0 2px; }
+.g4-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; font-size: 0.8rem; }
+.g4-fox { border-radius: 6px; padding: 2px 8px; border: 1px solid rgba(0,0,0,0.25); font-weight: 600; }
+.g4-fox.g4-W { background: #fff; }
+.g4-fox.g4-L { background: #c9cbd0; }
+.g4-fox.g4-D { background: #7f838a; color: #fff; }
+.g4-fox.earned { box-shadow: 0 0 0 2px var(--target); }
+.g4-note { margin-left: auto; }
+
+.gr4-row, .p4-row { display: grid; grid-template-columns: 24px repeat(11, minmax(0, 1fr)); align-items: start; }
+.p4-row { grid-template-columns: 24px repeat(12, minmax(0, 1fr)); }
+.gr4-row .track-col, .p4-row .track-col { min-width: 0; }
+.g4-field {
+  position: relative; display: block; width: var(--tcell); height: var(--tcell); border-radius: 6px; border: 1px solid rgba(0,0,0,0.25);
+  background: #fff linear-gradient(to top right, transparent calc(50% - 1px), var(--c4-green) calc(50% - 1px), var(--c4-green) calc(50% + 1px), transparent calc(50% + 1px));
+}
+.g4-field > .cell-wrap { position: absolute; }
+.g4-field > .cell-wrap:first-child { top: 0; right: 0; }
+.g4-field > .cell-wrap:last-child { bottom: 0; left: 0; }
+.sheet4 .cell.tri { width: 60%; height: 60%; min-width: 22px; min-height: 22px; border: none; background: transparent; border-radius: 6px; font-size: 0.85rem; }
+.sheet4 .cell.tri.marked { background: transparent; }
+.sheet4 .cell.tri.target { border: 2px solid var(--target); }
+.sheet4 .cell.circled { box-shadow: inset 0 0 0 3px var(--ink); border-radius: 50%; }
+.sheet4 .cell.circled.target { box-shadow: inset 0 0 0 3px var(--ink), 0 0 0 3px var(--target); }
+
+.sc4-yellow { background: var(--c4-yellow); color: var(--ink); }
+.sc4-blue { background: var(--c4-blue); }
+.sc4-grey { background: var(--c4-grey); }
+.sc4-green { background: var(--c4-green); }
+.sc4-pink { background: var(--c4-pink); }
+
+.any-number.polish { gap: 10px; }
+.polish-die { display: inline-flex; align-items: center; gap: 4px; }
+
+@media (max-width: 640px) {
+  .sheet4 .areas4 { grid-template-columns: 1fr; }
+  .sheet4 { --tcell: 30px; }
+  .sheet4 .cell { font-size: 0.8rem; }
+  .sheet4 .bonus { min-width: 20px; height: 20px; font-size: 0.7rem; padding: 0 2px; }
+  .y4-row, .y4-gap { grid-template-columns: 18px repeat(5, minmax(0, 1fr)) 40px; }
+  .g4-grid { --gcell: 30px; justify-content: start; }
+  .sheet4 .cell.g4 .bonus { min-width: 18px; height: 18px; font-size: 0.65rem; }
+  .gr4-row { grid-template-columns: 16px repeat(6, minmax(0, 1fr)); row-gap: 6px; }
+  .gr4-row > :nth-child(8) { grid-column: 2; }
+  .p4-row { grid-template-columns: 16px repeat(6, minmax(0, 1fr)); row-gap: 6px; }
+  .p4-row > :nth-child(8) { grid-column: 2; }
+  .sheet4 .cell.tri { min-width: 18px; min-height: 18px; font-size: 0.75rem; }
+  .g4-note { margin-left: 0; }
+}

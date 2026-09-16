@@ -89,7 +89,15 @@ export function DiceTray({
         <div className="dice-row">{platter.length ? platter.map(render) : <span className="tray-empty">empty</span>}</div>
       </div>
       <div className="tray-note">
-        Blue value = blue {dice.values.blue} + white {dice.values.white} = <strong>{dice.values.blue + dice.values.white}</strong>
+        {game.mode === 'clever4' ? (
+          <>
+            Blue area: row <strong>{dice.values.blue}</strong> (blue) · column <strong>{dice.values.white}</strong> (white)
+          </>
+        ) : (
+          <>
+            Blue value = blue {dice.values.blue} + white {dice.values.white} = <strong>{dice.values.blue + dice.values.white}</strong>
+          </>
+        )}
       </div>
     </div>
   );

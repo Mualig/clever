@@ -1,11 +1,12 @@
 # Ganz schön clever
 
 A browser version of the *Ganz schön clever* dice games by Wolfgang Warsch.
-Play solo or pass one device around for 2–4 players. Three games are available:
+Play solo or pass one device around for 2–4 players. Four games are available:
 
 - **Ganz schön clever** (*That's Pretty Clever*, 2018)
 - **Doppelt so clever** (*Twice as Clever*, 2019)
 - **Clever hoch Drei** (*Ganz schön clever 3* / *Clever Cubed*, 2020)
+- **Clever 4Ever** (*Ganz schön clever 4*, 2022)
 
 ## Run it
 
@@ -30,6 +31,7 @@ The workflow sets `BASE_PATH` to `/<repo>/` (or `/` for a `*.github.io` repo) so
 - `src/game/sheet.ts`, `rules.ts`, `clever1.ts` – the base game's sheet data, rules and variant.
 - `src/game/sheet2.ts`, `rules2.ts`, `clever2.ts` – Doppelt so clever.
 - `src/game/sheet3.ts`, `rules3.ts`, `clever3.ts` – Clever hoch Drei.
+- `src/game/sheet4.ts`, `rules4.ts`, `clever4.ts` – Clever 4Ever.
 - `src/ui/` – React components: setup (game and player selection), dice tray, one sheet view per game, scoreboard.
 
 The engine is a plain reducer over a serialisable state, so the same code can later run on a server for online play.
@@ -62,3 +64,17 @@ Clever hoch Drei adds: yellow rows bound to the die fields I–III (grey cells o
 multi-crosses for matching dice, the blue ±1 chain with 7 as reset and +4 for 2–4 / 10–12, brown left-to-right crossing
 with skips, pink half-plus-bonus or multiplied points, "?" bonuses (choose any number), the "any number" action row (3,
 4, 5, 6, ?, ?, ?), row-end bonuses on the action tracks, and forfeited rolls instead of taking an unusable die.
+
+Clever 4Ever adds: three yellow rows filled left to right (ascending top row with bonuses, a minus row with bonuses,
+a plus row; full columns score), the blue coordinate grid (blue die = row, white die = column; the second cross in a
+row or on the ↘ diagonal gives the bonus, columns with two crosses and the ↙ diagonal score), the grey polyomino area
+(a grey die crosses one whole part of connected same-shade cells whose size is at most the die number, starting from
+one of the two red-framed parts and then always adjacent to a cross; full columns score, every cell of a shade gives a
+fox), green fields with two triangles (both rows fill left to right, lower triangles give bonuses, complete fields
+score the sum, doubled from field 4), the pink track (2/4 circled for +2/+4, a 3 writes another 3, 5/6 take the bonus
+below, a 6 is circled for +3, score by last field), "?" bonuses (any number; blue: any free cell), the Polish silver
+action (±1 per action on a die taken from the silver platter, also with +1 dice from the platter; choosing blue may
+polish the white die when it lies on the platter and vice versa) and forfeited rolls. The action tracks hold 7 re-rolls
+(pink "?" at the end), 9 polish actions and 7 +1 actions. Interpretation choices: the 3 written by a 3 does not trigger
+another 3; only one die is polished per placement; a passive player may also polish the blue/white partner die when
+both lie on the platter.

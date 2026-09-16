@@ -73,6 +73,10 @@ export const clever3: Variant<Sheet3, Target3, Bonus3> = {
     if (slot >= s.anyUnlocked || s.anyUsed[slot]) throw new Error('action not available');
     s.anyUsed[slot] = true;
   },
+  polishLeft: () => 0,
+  usePolish: () => {
+    throw new Error('no polish action in this game');
+  },
   score: score3,
   soloRating: (total) => SOLO_RATINGS3.find((r) => total >= r.min)!.label,
 };

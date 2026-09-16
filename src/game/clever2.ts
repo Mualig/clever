@@ -69,6 +69,10 @@ export const clever2: Variant<Sheet2, Target2, Bonus2> = {
   useAnyNumber: () => {
     throw new Error('no "any number" action in this game');
   },
+  polishLeft: () => 0,
+  usePolish: () => {
+    throw new Error('no polish action in this game');
+  },
   score: score2,
   soloRating: (total) => SOLO_RATINGS2.find((r) => total >= r.min)!.label,
 };

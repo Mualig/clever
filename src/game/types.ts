@@ -35,9 +35,17 @@ export interface DiceState {
   field: Record<DieColor, number | null>;
 }
 
-/** Pretend the chosen die shows `value`, paid with "any number" action `slot`. */
+/**
+ * Pretend a die shows `value`. Paid either with "any number" action `slot` (Clever hoch Drei)
+ * or with one polish action per step of difference (Clever 4Ever, `polish: true`).
+ */
 export interface Pretend {
-  slot: number;
+  /** "Any number" action slot paying for the change. */
+  slot?: number;
+  /** Pay with polish actions instead (die must be on the silver platter). */
+  polish?: boolean;
+  /** Die whose number changes; defaults to the chosen die (blue and white may polish each other). */
+  color?: DieColor;
   value: number;
 }
 

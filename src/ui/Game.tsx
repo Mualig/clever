@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { canPass, canReroll, currentPlayer, diceAt, passiveCandidates, pendingTargets, plusOneCandidates, reduce, RuleError, targetsFor, variantFor } from '../game/engine';
+import { canPass, canReroll, currentPlayer, diceAt, passiveCandidates, pendingTargets, plusOneCandidates, polishable, reduce, RuleError, targetsFor, variantFor } from '../game/engine';
 import type { Sheet2, Target2 } from '../game/rules2';
 import type { Sheet3, Target3 } from '../game/rules3';
+import type { Sheet4, Target4 } from '../game/rules4';
 import type { DieColor } from '../game/sheet';
 import type { Action, GameState, Pretend, Sheet, Target } from '../game/types';
 import { DiceTray } from './DiceTray';
@@ -9,6 +10,7 @@ import { Scoreboard } from './Scoreboard';
 import { SheetView } from './SheetView';
 import { SheetView2 } from './SheetView2';
 import { SheetView3 } from './SheetView3';
+import { SheetView4 } from './SheetView4';
 
 type Mode = 'bonus' | 'pick' | 'roll' | 'passivePick' | 'extra' | 'over';
 
@@ -93,6 +95,8 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
   }, [player, multi]);
 
   const anyChoices = selected && mode !== 'bonus' ? v.anyNumberChoices(sheet) : [];
+  const polishLeft = mode === 'pick' || mode === 'passivePick' || mode === 'extra' ? v.polishLeft(sheet) : 0;
+  const polishDice: DieColor[] = selected && polishLeft > 0 ? polishable(game, selected) : [];
   const targets: unknown[] = mode === 'bonus' ? pendingTargets(game) : selected ? targetsFor(game, player, selected, as ?? undefined) : [];
 
   const dispatch = (a: Action) => {
@@ -149,6 +153,17 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
         />
       );
     }
+    if (game.mode === 'clever4') {
+      return (
+        <SheetView4
+          sheet={s as Sheet4}
+          round={game.round}
+          totalRounds={game.totalRounds}
+          targets={own ? (targets as Target4[]) : []}
+          onTarget={own ? onTarget : undefined}
+        />
+      );
+    }
     return (
       <SheetView sheet={s as Sheet} round={game.round} totalRounds={game.totalRounds} targets={own ? (targets as Target[]) : []} onTarget={own ? onTarget : undefined} />
     );
@@ -200,7 +215,9 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
       hint =
         v.unusableRoll === 'takeDie'
           ? 'This die fits nowhere on your sheet. You can still take it to keep it off the platter.'
-          : 'This die fits nowhere on your sheet. Pick another die, use an "any number" action, or forfeit the roll.';
+          : game.mode === 'clever4'
+            ? 'This die fits nowhere on your sheet. Pick another die, or forfeit the roll.'
+            : 'This die fits nowhere on your sheet. Pick another die, use an "any number" action, or forfeit the roll.';
     }
   } else if (mode === 'roll' && phase.kind === 'beforeRoll') {
     instruction = `Before roll ${phase.step + 1}: click a platter die to return it into the roll (${v.returnsLeft(sheet)} left), or roll now.`;
@@ -323,6 +340,38 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
                     {v.dieLabel[selected!]} counts as {as.value}
                   </span>
                 )}
+              </div>
+            )}
+
+            {polishDice.length > 0 && (
+              <div className="any-number polish">
+                <span className="any-label">Polish silver ({polishLeft} left)</span>
+                {polishDice.map((d) => {
+                  const real = game.dice.values[d];
+                  const cur = as?.polish && (as.color ?? selected) === d ? as.value : real;
+                  const set = (n: number) => {
+                    if (n < 1 || n > 6 || Math.abs(n - real) > polishLeft) return;
+                    setAs(n === real ? null : { polish: true, color: d, value: n });
+                    setFreeSlot(null);
+                  };
+                  return (
+                    <span key={d} className="polish-die">
+                      <span className="muted">{v.dieLabel[d]}</span>
+                      <button type="button" className="chip" disabled={cur <= 1 || Math.abs(cur - 1 - real) > polishLeft} onClick={() => set(cur - 1)} aria-label={`${v.dieLabel[d]} minus one`}>
+                        −
+                      </button>
+                      <span className={`chip ${cur !== real ? 'on' : ''}`}>{cur}</span>
+                      <button type="button" className="chip" disabled={cur >= 6 || Math.abs(cur + 1 - real) > polishLeft} onClick={() => set(cur + 1)} aria-label={`${v.dieLabel[d]} plus one`}>
+                        +
+                      </button>
+                      {cur !== real && (
+                        <span className="muted">
+                          {real} → {cur}, {Math.abs(cur - real)} action{Math.abs(cur - real) > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
             )}
 
