@@ -232,6 +232,8 @@ th.sc-yellow { color: var(--ink); }
 
 @media (max-width: 640px) {
   .areas { grid-template-columns: 1fr; }
+  /* Six round boxes do not fit in one row on a phone: two rows of three. */
+  .round-track { display: grid; grid-template-columns: repeat(3, 56px); }
   .tray { grid-template-columns: 1fr; }
   .die { width: 40px; height: 40px; }
   .track { gap: 2px; }
