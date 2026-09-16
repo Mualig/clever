@@ -1,8 +1,13 @@
 name: Deploy to GitHub Pages
 
+# One Pages site serves two builds:
+#   /            the latest release tag (vX.Y.Z) that is on main
+#   /develop/    the head of the develop branch
+# A push to develop or a new release tag rebuilds and republishes both.
 on:
   push:
-    branches: [main]
+    branches: [develop]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -14,25 +19,78 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  # Project sites are served from /<repo>/, user/org sites from /.
+  SITE_BASE: ${{ endsWith(github.event.repository.name, '.github.io') && '/' || format('/{0}/', github.event.repository.name) }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npm test
-      - name: Build
+
+      - name: Refuse release tags that are not on main
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME points to a commit that is not on main; release tags must be created on main."
+            exit 1
+          fi
+
+      - name: Resolve what to publish
+        id: refs
+        run: |
+          release="$(git tag --list 'v*' --merged origin/main --sort=-v:refname | head -n1)"
+          develop="$(git rev-parse --verify -q origin/develop || true)"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "develop=$develop" >> "$GITHUB_OUTPUT"
+          echo "Release: ${release:-none yet} · develop: ${develop:-no branch}"
+
+      - name: Build the release for the site root
+        if: steps.refs.outputs.release != ''
         env:
-          # Project sites are served from /<repo>/, user/org sites from /.
-          BASE_PATH: ${{ endsWith(github.event.repository.name, '.github.io') && '/' || format('/{0}/', github.event.repository.name) }}
-        run: npm run build
+          BASE_PATH: ${{ env.SITE_BASE }}
+        run: |
+          git worktree add "$RUNNER_TEMP/release" "${{ steps.refs.outputs.release }}"
+          cd "$RUNNER_TEMP/release"
+          npm ci
+          npm test
+          npm run build
+          mkdir -p "$GITHUB_WORKSPACE/site"
+          cp -R dist/. "$GITHUB_WORKSPACE/site/"
+
+      - name: Build develop for /develop/
+        if: steps.refs.outputs.develop != ''
+        env:
+          BASE_PATH: ${{ env.SITE_BASE }}develop/
+        run: |
+          git worktree add "$RUNNER_TEMP/develop" "${{ steps.refs.outputs.develop }}"
+          cd "$RUNNER_TEMP/develop"
+          npm ci
+          npm test
+          npm run build
+          mkdir -p "$GITHUB_WORKSPACE/site/develop"
+          cp -R dist/. "$GITHUB_WORKSPACE/site/develop/"
+
+      - name: Placeholder root while nothing is released
+        if: steps.refs.outputs.release == ''
+        run: |
+          mkdir -p site
+          cat > site/index.html <<'EOF'
+          <!doctype html><meta charset="utf-8"><title>Clever</title>
+          <p>No release yet. The development version is at <a href="develop/">develop/</a>.</p>
+          EOF
+
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build

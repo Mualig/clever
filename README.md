@@ -19,9 +19,17 @@ npm run build    # type-check + production build in dist/
 
 ## Deploy
 
-Pushing to `main` runs `.github/workflows/deploy.yml`, which tests, builds and publishes `dist/` to GitHub Pages.
+One GitHub Pages site serves two builds, published by `.github/workflows/deploy.yml`:
+
+- `/` – the latest release: the highest `vX.Y.Z` tag that is on `main`. Release by tagging a commit on `main`
+  (`git tag v1.2.0 && git push origin v1.2.0`); pushing to `main` alone does not deploy.
+- `/develop/` – the head of the `develop` branch, republished on every push to it.
+
+Both are rebuilt and tested on every run (a push to `develop` or a new tag). A tag that is not on `main` is refused.
+`.github/workflows/ci.yml` tests and builds pull requests and pushes to `main`.
 One-time setup in the repository: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-The workflow sets `BASE_PATH` to `/<repo>/` (or `/` for a `*.github.io` repo) so asset URLs resolve on Pages.
+The workflow sets `BASE_PATH` to `/<repo>/` and `/<repo>/develop/` (or `/` and `/develop/` for a `*.github.io` repo)
+so asset URLs resolve on Pages.
 
 ## Layout
 
