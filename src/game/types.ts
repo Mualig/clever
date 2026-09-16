@@ -53,8 +53,9 @@ export type Target =
   | { area: 'yellow'; cell: number }
   | { area: 'blue'; value: number }
   | { area: 'green' }
-  | { area: 'orange' }
-  | { area: 'purple' };
+  /** `value` = the die number to write (a target without it matches any number). */
+  | { area: 'orange'; value?: number }
+  | { area: 'purple'; value?: number };
 
 export interface PendingChoice {
   player: number;

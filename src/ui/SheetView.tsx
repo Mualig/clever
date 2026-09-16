@@ -21,6 +21,7 @@ import {
 import type { Sheet, Target } from '../game/types';
 import { BonusIcon } from './BonusIcon';
 import { RoundTrack } from './RoundTrack';
+import { OptionCell } from './SheetView3';
 
 interface Props {
   sheet: Sheet;
@@ -167,15 +168,22 @@ export function SheetView({ sheet, round, totalRounds, targets = [], onTarget, o
           <div className="track">
             <span className="track-arrow">➜</span>
             {Array.from({ length: TRACK_LENGTH }, (_, i) => {
-              const t: Target = { area: 'orange' };
               const marked = i < sheet.orange.length;
-              const active = i === sheet.orange.length && isTarget(t);
+              const options = i === sheet.orange.length ? targets.filter((t) => t.area === 'orange') : [];
               return (
                 <div key={i} className="track-col">
                   <span className="track-points"></span>
-                  <button type="button" className={cellCls('cell', marked, active ? t : undefined)} disabled={!active} onClick={click(t)}>
+                  <OptionCell
+                    className={cellCls('cell', marked)}
+                    options={options}
+                    label={(t) => {
+                      const v = (t as { value?: number }).value ?? 0;
+                      return ORANGE_MULTIPLIER[i] > 1 ? `${v} → ×${ORANGE_MULTIPLIER[i]} = ${v * ORANGE_MULTIPLIER[i]}` : String(v);
+                    }}
+                    onPick={onTarget}
+                  >
                     {marked ? sheet.orange[i] : ORANGE_MULTIPLIER[i] > 1 ? <span className="mult">×{ORANGE_MULTIPLIER[i]}</span> : ''}
-                  </button>
+                  </OptionCell>
                   <span className="track-bonus">{ORANGE_BONUS[i] && <BonusIcon bonus={ORANGE_BONUS[i]} earned={marked} />}</span>
                 </div>
               );
@@ -188,9 +196,8 @@ export function SheetView({ sheet, round, totalRounds, targets = [], onTarget, o
           <div className="track">
             <span className="track-arrow">➜</span>
             {Array.from({ length: TRACK_LENGTH }, (_, i) => {
-              const t: Target = { area: 'purple' };
               const marked = i < sheet.purple.length;
-              const active = i === sheet.purple.length && isTarget(t);
+              const options = i === sheet.purple.length ? targets.filter((t) => t.area === 'purple') : [];
               return (
                 <div key={i} className="track-col">
                   {i > 0 &&
@@ -202,9 +209,9 @@ export function SheetView({ sheet, round, totalRounds, targets = [], onTarget, o
                       <span className="track-sep">&lt;</span>
                     ))}
                   <span className="track-points"></span>
-                  <button type="button" className={cellCls('cell', marked, active ? t : undefined)} disabled={!active} onClick={click(t)}>
+                  <OptionCell className={cellCls('cell', marked)} options={options} label={(t) => String((t as { value?: number }).value ?? '')} onPick={onTarget}>
                     {marked ? sheet.purple[i] : ''}
-                  </button>
+                  </OptionCell>
                   <span className="track-bonus">{PURPLE_BONUS[i] && <BonusIcon bonus={PURPLE_BONUS[i]} earned={marked} />}</span>
                 </div>
               );

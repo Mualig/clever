@@ -66,11 +66,11 @@ export function legalTargets(sheet: Sheet, area: AreaColor, value: number): Targ
     case 'green':
       return sheet.green < TRACK_LENGTH && value >= GREEN_THRESHOLDS[sheet.green] ? [{ area }] : [];
     case 'orange':
-      return sheet.orange.length < TRACK_LENGTH ? [{ area }] : [];
+      return sheet.orange.length < TRACK_LENGTH ? [{ area, value }] : [];
     case 'purple': {
       if (sheet.purple.length >= TRACK_LENGTH) return [];
       const last = sheet.purple[sheet.purple.length - 1];
-      return last === undefined || last === 6 || value > last ? [{ area }] : [];
+      return last === undefined || last === 6 || value > last ? [{ area, value }] : [];
     }
   }
 }
@@ -84,6 +84,9 @@ export function sameTarget(a: Target, b: Target): boolean {
   if (a.area !== b.area) return false;
   if (a.area === 'yellow' && b.area === 'yellow') return a.cell === b.cell;
   if (a.area === 'blue' && b.area === 'blue') return a.value === b.value;
+  if ((a.area === 'orange' && b.area === 'orange') || (a.area === 'purple' && b.area === 'purple')) {
+    return a.value === undefined || b.value === undefined || a.value === b.value;
+  }
   return true;
 }
 
