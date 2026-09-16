@@ -20,6 +20,7 @@ import {
 } from '../game/sheet';
 import type { Sheet, Target } from '../game/types';
 import { BonusIcon } from './BonusIcon';
+import { RoundTrack } from './RoundTrack';
 
 interface Props {
   sheet: Sheet;
@@ -27,6 +28,8 @@ interface Props {
   totalRounds: number;
   targets?: Target[];
   onTarget?: (t: Target) => void;
+  /** Score-card mode: makes the next round's box clickable. */
+  onNextRound?: () => void;
   compact?: boolean;
 }
 
@@ -42,7 +45,7 @@ function ActionBar({ label, icon, unlocked, used }: { label: string; icon: strin
   );
 }
 
-export function SheetView({ sheet, round, totalRounds, targets = [], onTarget, compact }: Props) {
+export function SheetView({ sheet, round, totalRounds, targets = [], onTarget, onNextRound, compact }: Props) {
   const isTarget = (t: Target) => targets.some((x) => sameTarget(x, t));
   const click = (t: Target) => () => onTarget?.(t);
   const cellCls = (base: string, marked: boolean, t?: Target) =>
@@ -60,18 +63,7 @@ export function SheetView({ sheet, round, totalRounds, targets = [], onTarget, c
   return (
     <div className={`sheet ${compact ? 'compact' : ''}`}>
       <div className="sheet-top">
-        <div className="round-track">
-          {ROUND_BONUS.map((b, i) => {
-            const n = i + 1;
-            const cls = ['round-box', n <= round ? 'marked' : '', n > totalRounds ? 'unused' : ''].join(' ');
-            return (
-              <div key={n} className={cls}>
-                <span className="round-num">{n}</span>
-                {b && <BonusIcon bonus={b} />}
-              </div>
-            );
-          })}
-        </div>
+        <RoundTrack bonuses={ROUND_BONUS} round={round} totalRounds={totalRounds} icon={(b) => <BonusIcon bonus={b} />} onNext={onNextRound} />
         <div className="action-bars">
           <ActionBar label="Re-rolls" icon="⟳" unlocked={sheet.rerollsUnlocked} used={sheet.rerollsUsed} />
           <ActionBar label="+1 actions" icon="+1" unlocked={sheet.plusOnesUnlocked} used={sheet.plusOnesUsed} />

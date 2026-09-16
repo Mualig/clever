@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { currentPlayer, newGame } from '../game/engine';
+import { currentPlayer, newGame, newScoreCard } from '../game/engine';
 import type { GameState } from '../game/types';
 import { Game } from './Game';
+import { ScoreCard } from './ScoreCard';
 import { Setup } from './Setup';
 
 const STORAGE_KEY = 'clever-game-v2';
@@ -53,15 +54,16 @@ export function App() {
           setHistory(savedHistory);
           setGame(saved);
         }}
-        onStart={(mode, names) => {
+        onStart={(mode, names, scoreCard) => {
           setHistory([]);
-          setGame(newGame(names, mode));
+          setGame(scoreCard ? newScoreCard(names, mode) : newGame(names, mode));
         }}
       />
     );
   }
+  const Screen = game.manual && game.phase.kind !== 'gameOver' ? ScoreCard : Game;
   return (
-    <Game
+    <Screen
       game={game}
       setGame={(next) => {
         setHistory((h) => [...h, game].slice(-MAX_HISTORY));

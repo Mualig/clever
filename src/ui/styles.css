@@ -574,3 +574,11 @@ th.sc-yellow { color: var(--ink); }
   .sheet4 .cell.tri { min-width: 18px; min-height: 18px; font-size: 0.75rem; }
   .g4-note { margin-left: 0; }
 }
+
+/* ---------- score-card mode (real dice) ---------- */
+.turn-panel.role-manual { border-color: #b7c4d6; }
+button.round-box { font: inherit; color: inherit; cursor: pointer; }
+.round-box.next { border: 2px solid var(--target); box-shadow: 0 0 0 3px rgba(255,61,113,0.3); animation: pulse 1s infinite alternate; }
+.round-box.next:hover { background: #fff; }
+/* On a score card every free box is clickable, so only bonus choices pulse. */
+.manual:not(.pending-choice) .cell.target { animation: none; box-shadow: none; border: 2px solid var(--target); }

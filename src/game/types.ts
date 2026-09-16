@@ -71,6 +71,8 @@ export type Phase =
   | { kind: 'activeExtra' }
   /** A passive player picks from the silver platter, then may use +1 actions. */
   | { kind: 'passive'; player: number; picked: boolean }
+  /** Score-card mode: the dice are rolled at the table, the sheets are marked by hand. */
+  | { kind: 'manual' }
   | { kind: 'gameOver' };
 
 export interface LogEntry {
@@ -81,6 +83,8 @@ export interface LogEntry {
 
 export interface GameState {
   mode: GameMode;
+  /** Score-card mode: no dice or turns are tracked, see `newScoreCard`. */
+  manual?: boolean;
   players: PlayerState[];
   solo: boolean;
   totalRounds: number;
@@ -113,7 +117,16 @@ export type Action =
   | { type: 'endActive' }
   | { type: 'passivePick'; color: DieColor; target: unknown; as?: Pretend }
   | { type: 'passiveSkip' }
-  | { type: 'passiveDone' };
+  | { type: 'passiveDone' }
+  // --- score-card mode only ---
+  /** Mark `target` on `player`'s sheet as if a die showed `value` (`blue` = the blue die when it matters). */
+  | { type: 'mark'; player: number; target: unknown; value: number; blue: number }
+  /** Start the next round (granting its bonus), or finish the game after the last one. */
+  | { type: 'nextRound' }
+  /** Record that `player` spent an unlocked action at the table. */
+  | { type: 'useAction'; player: number; action: ManualAction };
+
+export type ManualAction = 'reroll' | 'plusOne' | 'return' | 'anyNumber' | 'polish';
 
 export interface AreaScores {
   yellow: number;

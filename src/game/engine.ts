@@ -4,7 +4,7 @@ import { clever3 } from './clever3';
 import { clever4 } from './clever4';
 import { nextRandom, randomSeed } from './rng';
 import { DIE_COLORS, ROUNDS_BY_PLAYER_COUNT, type DieColor } from './sheet';
-import type { Action, DiceState, GameState, Pretend } from './types';
+import type { Action, DiceState, GameState, ManualAction, Pretend } from './types';
 import type { DieValues, GameMode, PlacementContext, Variant } from './variant';
 
 export class RuleError extends Error {}
@@ -43,6 +43,7 @@ export function currentPlayer(s: GameState): number {
       return s.activePlayer;
     case 'passive':
       return s.phase.player;
+    case 'manual':
     case 'gameOver':
       return -1;
   }
@@ -163,6 +164,86 @@ export function canReturn(s: GameState): boolean {
 
 export function canPass(s: GameState): boolean {
   return s.pending.length === 0 && s.phase.kind === 'active' && variantFor(s.mode).unusableRoll === 'forfeit';
+}
+
+// ---------------------------------------------------------------------------
+// Score-card mode (real dice, sheets marked by hand)
+// ---------------------------------------------------------------------------
+
+const MANUAL_CTX: PlacementContext = { role: 'active', field: null, companions: [], swept: [] };
+const MANUAL_ACTIONS: readonly Action['type'][] = ['mark', 'nextRound', 'useAction'];
+
+/** A box that can be marked on a score card, with the die numbers that lead to it. */
+export interface ManualOption {
+  target: unknown;
+  /** Number of the (white, i.e. any-colour) die. */
+  value: number;
+  /** Number of the blue die, relevant for the blue area only. */
+  blue: number;
+}
+
+/** Die values standing for "a die of the right colour shows `value`" (white is wild). */
+function manualValues(value: number, blue: number): DieValues {
+  const real = Object.fromEntries(DIE_COLORS.map((c) => [c, 1])) as Record<DieColor, number>;
+  real.white = value;
+  real.blue = blue;
+  return { value, blue: value + blue, real, effective: { ...real } };
+}
+
+/**
+ * Every box `player` could mark now with some die, one entry per distinct outcome. Boxes whose
+ * result depends on the number (e.g. a written value) appear once per number.
+ */
+export function manualOptions(s: GameState, player: number): ManualOption[] {
+  const v = variantFor(s.mode);
+  const sheet = sheetOf(s, player);
+  const seen = new Map<string, ManualOption>();
+  for (let value = 1; value <= 6; value++) {
+    for (let blue = 1; blue <= 6; blue++) {
+      const values = manualValues(value, blue);
+      for (const target of v.targets(sheet, 'white', values, MANUAL_CTX)) {
+        const trial = structuredClone(sheet);
+        let bonuses: unknown[];
+        try {
+          bonuses = v.apply(trial, target, values, MANUAL_CTX);
+        } catch {
+          continue;
+        }
+        const key = JSON.stringify([trial, bonuses]);
+        if (!seen.has(key)) seen.set(key, { target, value, blue });
+      }
+    }
+  }
+  return [...seen.values()];
+}
+
+function useManualAction(s: GameState, player: number, action: ManualAction) {
+  const v = variantFor(s.mode);
+  const sheet = sheetOf(s, player);
+  switch (action) {
+    case 'reroll':
+      if (v.rerollsLeft(sheet) <= 0) fail('no re-roll action left');
+      v.useReroll(sheet);
+      return log(s, player, 'Re-roll action used');
+    case 'plusOne':
+      if (v.plusOnesLeft(sheet) <= 0) fail('no +1 action left');
+      v.usePlusOne(sheet);
+      return log(s, player, '+1 action used');
+    case 'return':
+      if (v.returnsLeft(sheet) <= 0) fail('no return action left');
+      v.useReturn(sheet);
+      return log(s, player, 'Return action used');
+    case 'anyNumber': {
+      const choice = v.anyNumberChoices(sheet)[0];
+      if (!choice) fail('no "any number" action left');
+      v.useAnyNumber(sheet, choice.slot);
+      return log(s, player, `Any-number action used${choice.value === null ? '' : ` (${choice.value})`}`);
+    }
+    case 'polish':
+      if (v.polishLeft(sheet) <= 0) fail('no polish action left');
+      v.usePolish(sheet, 1);
+      return log(s, player, 'Polish action used');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -376,11 +457,26 @@ export function newGame(names: string[], mode: GameMode = 'clever', seed: number
   return s;
 }
 
+/**
+ * A score card for a game played with real dice: nothing about dice or turns is tracked. Any
+ * box may be marked at any time (`mark`), rounds are advanced by the players (`nextRound`, which
+ * grants the round bonus), spent actions are recorded (`useAction`). Bonuses still chain.
+ */
+export function newScoreCard(names: string[], mode: GameMode = 'clever', seed?: number): GameState {
+  const s = newGame(names, mode, seed);
+  s.manual = true;
+  s.phase = { kind: 'manual' };
+  return s;
+}
+
 /** Applies an action and returns the new state. Throws RuleError on illegal actions. */
 export function reduce(prev: GameState, action: Action): GameState {
   const s = structuredClone(prev);
   const v = variantFor(s.mode);
   if (s.phase.kind === 'gameOver') fail('game is over');
+  if (!!s.manual !== MANUAL_ACTIONS.includes(action.type) && action.type !== 'resolve' && action.type !== 'skipBonus') {
+    fail(s.manual ? 'not available on a score card' : 'only available on a score card');
+  }
 
   if (action.type === 'resolve') {
     const head = s.pending[0];
@@ -490,6 +586,32 @@ export function reduce(prev: GameState, action: Action): GameState {
       const next = (s.phase.player + 1) % s.players.length;
       if (next === s.activePlayer) endTurn(s);
       else s.phase = { kind: 'passive', player: next, picked: false };
+      return s;
+    }
+    case 'mark': {
+      if (!s.players[action.player]) fail('no such player');
+      for (const n of [action.value, action.blue]) if (!Number.isInteger(n) || n < 1 || n > 6) fail('number must be 1 to 6');
+      const sheet = sheetOf(s, action.player);
+      const values = manualValues(action.value, action.blue);
+      if (!v.targets(sheet, 'white', values, MANUAL_CTX).some((t) => v.sameTarget(t, action.target))) fail('that box cannot be marked now');
+      const isBlue = (action.target as { area?: string }).area === 'blue';
+      log(s, action.player, `${isBlue ? `blue ${action.blue} + white ${action.value}` : action.value} → ${v.describeTarget(action.target)}`);
+      grant(s, action.player, v.apply(sheet, action.target, values, MANUAL_CTX));
+      return s;
+    }
+    case 'nextRound': {
+      if (s.round >= s.totalRounds) {
+        s.phase = { kind: 'gameOver' };
+        return s;
+      }
+      s.round += 1;
+      const bonus = v.roundBonus(s.round);
+      if (bonus) for (let p = 0; p < s.players.length; p++) grant(s, p, [bonus]);
+      return s;
+    }
+    case 'useAction': {
+      if (!s.players[action.player]) fail('no such player');
+      useManualAction(s, action.player, action.action);
       return s;
     }
   }

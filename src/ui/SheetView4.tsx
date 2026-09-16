@@ -44,6 +44,7 @@ import {
   type Shade,
 } from '../game/sheet4';
 import { OptionCell } from './SheetView3';
+import { RoundTrack } from './RoundTrack';
 
 export function BonusIcon4({ bonus, earned, lost, big }: { bonus: Bonus4; earned?: boolean; lost?: boolean; big?: boolean }) {
   const cls = ['bonus', earned ? 'earned' : '', lost ? 'lost' : '', big ? 'big' : ''].join(' ');
@@ -100,12 +101,14 @@ interface Props {
   totalRounds: number;
   targets?: Target4[];
   onTarget?: (t: Target4) => void;
+  /** Score-card mode: makes the next round's box clickable. */
+  onNextRound?: () => void;
 }
 
 const SHADES: readonly Shade[] = ['W', 'L', 'D'];
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
-export function SheetView4({ sheet, round, totalRounds, targets = [], onTarget }: Props) {
+export function SheetView4({ sheet, round, totalRounds, targets = [], onTarget, onNextRound }: Props) {
   const score = score4(sheet);
   const pts = (key: string) => score.areas.find((a) => a.key === key)!.points;
   const optionsFor = (pred: (t: Target4) => boolean) => targets.filter(pred);
@@ -116,18 +119,7 @@ export function SheetView4({ sheet, round, totalRounds, targets = [], onTarget }
   return (
     <div className="sheet sheet4">
       <div className="sheet-top">
-        <div className="round-track">
-          {ROUND_BONUS4.map((b, i) => {
-            const n = i + 1;
-            const cls = ['round-box', n <= round ? 'marked' : '', n > totalRounds ? 'unused' : ''].join(' ');
-            return (
-              <div key={n} className={cls}>
-                <span className="round-num">{n}</span>
-                {b && <BonusIcon4 bonus={b} />}
-              </div>
-            );
-          })}
-        </div>
+        <RoundTrack bonuses={ROUND_BONUS4} round={round} totalRounds={totalRounds} icon={(b) => <BonusIcon4 bonus={b} />} onNext={onNextRound} />
         <div className="action-bars">
           <ActionRow icon="⟳" title="Re-rolls" unlocked={sheet.rerollsUnlocked} used={sheet.rerollsUsed} slots={REROLL_SLOTS4} end={ROW_END_BONUS4.reroll} />
           <ActionRow icon="◉" title="Polish silver (±1 on a platter die)" unlocked={sheet.polishUnlocked} used={sheet.polishUsed} slots={POLISH_SLOTS4} end={ROW_END_BONUS4.polish} />

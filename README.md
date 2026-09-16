@@ -36,6 +36,15 @@ The workflow sets `BASE_PATH` to `/<repo>/` (or `/` for a `*.github.io` repo) so
 
 The engine is a plain reducer over a serialisable state, so the same code can later run on a server for online play.
 
+## Score-card mode
+
+Every game can also be started with **Real dice (score card)** in the setup. Nothing about dice or turns is tracked
+then: you roll at the table and click the boxes you mark on any player's sheet. Boxes that can hold several numbers
+(a written value, a blue sum) ask which one. Bonuses chain as usual and choices are asked for; when a new round starts,
+click its number on the sheet to get the round bonus; spent actions (re-roll, +1, return, any number, polish) are
+recorded with one click. In the engine this is `newScoreCard()` plus the actions `mark`, `nextRound` and `useAction`
+on the same reducer; `manualOptions()` lists every box that could be marked, one entry per distinct outcome.
+
 ## Rules implemented
 
 - Rounds: 6 (solo and 2 players), 5 (3 players), 4 (4 players). Round bonuses: re-roll, +1, re-roll, then X or 6 in

@@ -24,6 +24,7 @@ import {
   type Bonus2,
 } from '../game/sheet2';
 import { OptionCell } from './SheetView3';
+import { RoundTrack } from './RoundTrack';
 
 export function BonusIcon2({ bonus, earned, lost, big }: { bonus: Bonus2; earned?: boolean; lost?: boolean; big?: boolean }) {
   const cls = ['bonus', earned ? 'earned' : '', lost ? 'lost' : '', big ? 'big' : ''].join(' ');
@@ -63,9 +64,11 @@ interface Props {
   totalRounds: number;
   targets?: Target2[];
   onTarget?: (t: Target2) => void;
+  /** Score-card mode: makes the next round's box clickable. */
+  onNextRound?: () => void;
 }
 
-export function SheetView2({ sheet, round, totalRounds, targets = [], onTarget }: Props) {
+export function SheetView2({ sheet, round, totalRounds, targets = [], onTarget, onNextRound }: Props) {
   const score = score2(sheet);
   const pts = (key: string) => score.areas.find((a) => a.key === key)!.points;
   const optionsFor = (pred: (t: Target2) => boolean) => targets.filter(pred);
@@ -79,18 +82,7 @@ export function SheetView2({ sheet, round, totalRounds, targets = [], onTarget }
   return (
     <div className="sheet sheet3 sheet2">
       <div className="sheet-top">
-        <div className="round-track">
-          {ROUND_BONUS2.map((b, i) => {
-            const n = i + 1;
-            const cls = ['round-box', n <= round ? 'marked' : '', n > totalRounds ? 'unused' : ''].join(' ');
-            return (
-              <div key={n} className={cls}>
-                <span className="round-num">{n}</span>
-                {b && <BonusIcon2 bonus={b} />}
-              </div>
-            );
-          })}
-        </div>
+        <RoundTrack bonuses={ROUND_BONUS2} round={round} totalRounds={totalRounds} icon={(b) => <BonusIcon2 bonus={b} />} onNext={onNextRound} />
         <div className="action-bars">
           <ActionRow2 icon="⟳" title="Re-rolls" unlocked={sheet.rerollsUnlocked} used={sheet.rerollsUsed} end={ROW_END_BONUS2.reroll} />
           <ActionRow2 icon="↩" title="Return actions" unlocked={sheet.returnsUnlocked} used={sheet.returnsUsed} end={ROW_END_BONUS2.return} />

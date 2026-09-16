@@ -23,6 +23,7 @@ import {
   describeBonus3,
   type Bonus3,
 } from '../game/sheet3';
+import { RoundTrack } from './RoundTrack';
 
 export function BonusIcon3({ bonus, earned, lost, big }: { bonus: Bonus3; earned?: boolean; lost?: boolean; big?: boolean }) {
   const cls = ['bonus', earned ? 'earned' : '', lost ? 'lost' : '', big ? 'big' : ''].join(' ');
@@ -129,9 +130,11 @@ interface Props {
   totalRounds: number;
   targets?: Target3[];
   onTarget?: (t: Target3) => void;
+  /** Score-card mode: makes the next round's box clickable. */
+  onNextRound?: () => void;
 }
 
-export function SheetView3({ sheet, round, totalRounds, targets = [], onTarget }: Props) {
+export function SheetView3({ sheet, round, totalRounds, targets = [], onTarget, onNextRound }: Props) {
   const score = score3(sheet);
   const pts = (key: string) => score.areas.find((a) => a.key === key)!.points;
   const optionsFor = (pred: (t: Target3) => boolean) => targets.filter(pred);
@@ -145,18 +148,7 @@ export function SheetView3({ sheet, round, totalRounds, targets = [], onTarget }
   return (
     <div className="sheet sheet3">
       <div className="sheet-top">
-        <div className="round-track">
-          {ROUND_BONUS3.map((b, i) => {
-            const n = i + 1;
-            const cls = ['round-box', n <= round ? 'marked' : '', n > totalRounds ? 'unused' : ''].join(' ');
-            return (
-              <div key={n} className={cls}>
-                <span className="round-num">{n}</span>
-                {b && <BonusIcon3 bonus={b} />}
-              </div>
-            );
-          })}
-        </div>
+        <RoundTrack bonuses={ROUND_BONUS3} round={round} totalRounds={totalRounds} icon={(b) => <BonusIcon3 bonus={b} />} onNext={onNextRound} />
         <div className="action-bars">
           <ActionRow icon="⟳" title="Re-rolls" unlocked={sheet.rerollsUnlocked} used={Array.from({ length: ACTION_SLOTS3 }, (_, i) => i < sheet.rerollsUsed)} end={ROW_END_BONUS.reroll} />
           <ActionRow icon="⚄?" title="Any number" unlocked={sheet.anyUnlocked} used={sheet.anyUsed} numbers={ANY_NUMBER_SLOTS} end={ROW_END_BONUS.anyNumber} />

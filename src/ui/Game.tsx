@@ -1,16 +1,10 @@
 import { useEffect, useState } from 'react';
 import { canPass, canReroll, currentPlayer, diceAt, passiveCandidates, pendingTargets, plusOneCandidates, polishable, reduce, RuleError, targetsFor, variantFor } from '../game/engine';
-import type { Sheet2, Target2 } from '../game/rules2';
-import type { Sheet3, Target3 } from '../game/rules3';
-import type { Sheet4, Target4 } from '../game/rules4';
 import type { DieColor } from '../game/sheet';
-import type { Action, GameState, Pretend, Sheet, Target } from '../game/types';
+import type { Action, GameState, Pretend } from '../game/types';
 import { DiceTray } from './DiceTray';
 import { Scoreboard } from './Scoreboard';
-import { SheetView } from './SheetView';
-import { SheetView2 } from './SheetView2';
-import { SheetView3 } from './SheetView3';
-import { SheetView4 } from './SheetView4';
+import { SheetFor } from './SheetFor';
 
 type Mode = 'bonus' | 'pick' | 'roll' | 'passivePick' | 'extra' | 'over';
 
@@ -22,7 +16,7 @@ interface Props {
   onQuit: () => void;
 }
 
-function LogView({ game }: { game: GameState }) {
+export function LogView({ game }: { game: GameState }) {
   return (
     <div className="log">
       {game.log
@@ -129,45 +123,7 @@ export function Game({ game, setGame, canUndo, onUndo, onQuit }: Props) {
     setFreeSlot(null);
   };
 
-  const renderSheet = (p: number, own: boolean) => {
-    const s = game.players[p].sheet;
-    if (game.mode === 'clever2') {
-      return (
-        <SheetView2
-          sheet={s as Sheet2}
-          round={game.round}
-          totalRounds={game.totalRounds}
-          targets={own ? (targets as Target2[]) : []}
-          onTarget={own ? onTarget : undefined}
-        />
-      );
-    }
-    if (game.mode === 'clever3') {
-      return (
-        <SheetView3
-          sheet={s as Sheet3}
-          round={game.round}
-          totalRounds={game.totalRounds}
-          targets={own ? (targets as Target3[]) : []}
-          onTarget={own ? onTarget : undefined}
-        />
-      );
-    }
-    if (game.mode === 'clever4') {
-      return (
-        <SheetView4
-          sheet={s as Sheet4}
-          round={game.round}
-          totalRounds={game.totalRounds}
-          targets={own ? (targets as Target4[]) : []}
-          onTarget={own ? onTarget : undefined}
-        />
-      );
-    }
-    return (
-      <SheetView sheet={s as Sheet} round={game.round} totalRounds={game.totalRounds} targets={own ? (targets as Target[]) : []} onTarget={own ? onTarget : undefined} />
-    );
-  };
+  const renderSheet = (p: number, own: boolean) => <SheetFor game={game} player={p} targets={own ? targets : []} onTarget={own ? onTarget : undefined} />;
 
   if (phase.kind === 'gameOver') {
     return (

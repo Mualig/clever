@@ -14,12 +14,13 @@ export function Setup({
   canResume,
   onResume,
 }: {
-  onStart: (mode: GameMode, names: string[]) => void;
+  onStart: (mode: GameMode, names: string[], scoreCard: boolean) => void;
   canResume: boolean;
   onResume: () => void;
 }) {
   const [mode, setMode] = useState<GameMode>('clever');
   const [count, setCount] = useState(2);
+  const [scoreCard, setScoreCard] = useState(false);
   const [names, setNames] = useState(['Player 1', 'Player 2', 'Player 3', 'Player 4']);
   return (
     <div className="setup">
@@ -42,6 +43,17 @@ export function Setup({
             ))}
           </div>
         </div>
+        <div className="field">
+          Dice
+          <div className="seg">
+            <button type="button" className={scoreCard ? '' : 'on'} onClick={() => setScoreCard(false)}>
+              The app rolls
+            </button>
+            <button type="button" className={scoreCard ? 'on' : ''} onClick={() => setScoreCard(true)}>
+              Real dice (score card)
+            </button>
+          </div>
+        </div>
         <label className="field">
           Players
           <div className="seg">
@@ -60,7 +72,11 @@ export function Setup({
         ))}
         <p className="hint">
           {ROUNDS_BY_PLAYER_COUNT[count]} rounds.{' '}
-          {count === 1 ? 'You alternate between the active and the passive role.' : 'Pass the device around: everyone plays on this screen.'}
+          {scoreCard
+            ? 'Score card only: roll your own dice and click the boxes you mark. The sheet chains bonuses, tracks actions and adds up the score.'
+            : count === 1
+              ? 'You alternate between the active and the passive role.'
+              : 'Pass the device around: everyone plays on this screen.'}
         </p>
         <button
           type="button"
@@ -69,6 +85,7 @@ export function Setup({
             onStart(
               mode,
               names.slice(0, count).map((n, i) => n.trim() || `Player ${i + 1}`),
+              scoreCard,
             )
           }
         >
